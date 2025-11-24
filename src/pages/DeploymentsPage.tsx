@@ -12,7 +12,8 @@ import {
     GitCommit,
     ExternalLink,
     Loader2,
-    ChevronDown
+    ChevronDown,
+    AlertTriangle
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -26,6 +27,7 @@ interface Deployment {
     author: string;
     timestamp: string;
     duration: string;
+    incidentCount?: number;
 }
 
 const MOCK_DEPLOYMENTS: Deployment[] = [
@@ -38,7 +40,8 @@ const MOCK_DEPLOYMENTS: Deployment[] = [
         commitMessage: 'feat: implement OIDC provider',
         author: 'enes',
         timestamp: '2h ago',
-        duration: '45s'
+        duration: '45s',
+        incidentCount: 1
     },
     {
         id: 'dep-2',
@@ -49,7 +52,8 @@ const MOCK_DEPLOYMENTS: Deployment[] = [
         commitMessage: 'fix: modal positioning issue',
         author: 'antigravity',
         timestamp: 'Just now',
-        duration: 'Running...'
+        duration: 'Running...',
+        incidentCount: 1
     },
     {
         id: 'dep-3',
@@ -60,7 +64,8 @@ const MOCK_DEPLOYMENTS: Deployment[] = [
         commitMessage: 'chore: update stripe api version',
         author: 'alex',
         timestamp: '5h ago',
-        duration: '1m 20s'
+        duration: '1m 20s',
+        incidentCount: 1
     },
     {
         id: 'dep-4',
@@ -71,7 +76,8 @@ const MOCK_DEPLOYMENTS: Deployment[] = [
         commitMessage: 'perf: optimize etl batch processing',
         author: 'sarah',
         timestamp: '1d ago',
-        duration: '5m 12s'
+        duration: '5m 12s',
+        incidentCount: 1
     },
     {
         id: 'dep-5',
@@ -82,7 +88,8 @@ const MOCK_DEPLOYMENTS: Deployment[] = [
         commitMessage: 'test: add integration tests for auth flow',
         author: 'enes',
         timestamp: '1d ago',
-        duration: '3m 45s'
+        duration: '3m 45s',
+        incidentCount: 0
     }
 ];
 
@@ -293,6 +300,15 @@ const DeploymentsPage: React.FC = () => {
                                                 )}>
                                                     {dep.environment}
                                                 </span>
+                                                {dep.incidentCount !== undefined && dep.incidentCount > 0 && (
+                                                    <>
+                                                        <span className="text-zinc-600 text-xs">•</span>
+                                                        <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-sm bg-rose-500/10 text-rose-400 font-mono">
+                                                            <AlertTriangle className="h-3 w-3" />
+                                                            {dep.incidentCount}
+                                                        </span>
+                                                    </>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2 text-sm text-zinc-400">
                                                 <GitCommit className="h-3 w-3" />

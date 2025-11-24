@@ -1,24 +1,21 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-    ChevronRight,
-    CheckCircle2,
-    XCircle,
-    Loader2,
-    Clock,
-    GitCommit,
-    Github,
-    RotateCcw,
-    ExternalLink,
-    Terminal,
-    Activity
-} from 'lucide-react';
+import { ChevronRight, Rocket, CheckCircle2, XCircle, Loader2, Clock, GitCommit, AlertTriangle, Github, RotateCcw, Terminal, Activity } from 'lucide-react';
 import { clsx } from 'clsx';
+import { getIncidentsByDeploymentId, Incident } from '../services/incidentService';
 
 const DeploymentDetailsPage: React.FC = () => {
     const { deploymentId } = useParams();
     const [activeTab, setActiveTab] = useState<'logs' | 'timeline'>('logs');
+    const [incidents, setIncidents] = useState<Incident[]>([]);
+
+    // Load incidents for this deployment
+    React.useEffect(() => {
+        if (deploymentId) {
+            getIncidentsByDeploymentId(deploymentId).then(setIncidents);
+        }
+    }, [deploymentId]);
 
     // Mock deployment data - different scenarios based on ID
     const getMockDeployment = (id: string | undefined) => {
@@ -355,6 +352,50 @@ const DeploymentDetailsPage: React.FC = () => {
                         </div>
                     )}
                 </motion.div>
+
+                {/* Incidents Section */}
+                {incidents.length > 0 && (
+                    <div className="mt-8">
+                        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-rose-400" />
+                            Related Incidents ({incidents.length})
+                        </h2>
+                        <div className="space-y-3">
+                            {incidents.map((incident) => (
+                                <div key={incident.id} className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 hover:bg-zinc-900/50 transition-colors">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <h3 className="font-medium text-white">{incident.title}</h3>
+                                                <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
+                                                    incident.severity === 'critical' ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
+                                                        incident.severity === 'high' ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" :
+                                                            incident.severity === 'medium' ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
+                                                                "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
+                                                )}>
+                                                    {incident.severity}
+                                                </span>
+                                                <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
+                                                    incident.status === 'resolved' || incident.status === 'closed' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
+                                                        incident.status === 'investigating' ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
+                                                            "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
+                                                )}>
+                                                    {incident.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-zinc-400">{incident.description}</p>
+                                            <div className="flex items-center gap-4 mt-2 text-xs text-zinc-500 font-mono">
+                                                <span>Created {incident.createdAt}</span>
+                                                {incident.resolvedAt && <span>• Resolved {incident.resolvedAt}</span>}
+                                                {incident.assignedTo && <span>• Assigned to {incident.assignedTo}</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
