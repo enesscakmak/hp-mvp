@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Trash2, CheckSquare } from 'lucide-react';
 import { clsx } from 'clsx';
 import CustomDropdown from './CustomDropdown';
-import { ChecklistStep } from '../services/checklistService';
+import { ChecklistStep, ChecklistTemplate } from '../services/checklistService';
 
 interface CreateChecklistTemplateModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: { title: string; description: string; type: 'deployment' | 'incident'; steps: ChecklistStep[] }) => void;
+    initialData?: ChecklistTemplate | null;
 }
 
-const CreateChecklistTemplateModal: React.FC<CreateChecklistTemplateModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const CreateChecklistTemplateModal: React.FC<CreateChecklistTemplateModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [type, setType] = useState<'deployment' | 'incident'>('deployment');
@@ -19,6 +20,21 @@ const CreateChecklistTemplateModal: React.FC<CreateChecklistTemplateModalProps> 
         { id: '1', text: '', isOptional: false }
     ]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && initialData) {
+            setTitle(initialData.title);
+            setDescription(initialData.description);
+            setType(initialData.type);
+            setSteps(initialData.steps.length > 0 ? initialData.steps : [{ id: '1', text: '', isOptional: false }]);
+        } else if (isOpen && !initialData) {
+            // Reset form for create mode
+            setTitle('');
+            setDescription('');
+            setType('deployment');
+            setSteps([{ id: '1', text: '', isOptional: false }]);
+        }
+    }, [isOpen, initialData]);
 
     const handleAddStep = () => {
         setSteps([...steps, { id: Date.now().toString(), text: '', isOptional: false }]);
@@ -46,12 +62,6 @@ const CreateChecklistTemplateModal: React.FC<CreateChecklistTemplateModalProps> 
             steps: steps.filter(s => s.text.trim())
         });
         setIsSubmitting(false);
-
-        // Reset form
-        setTitle('');
-        setDescription('');
-        setType('deployment');
-        setSteps([{ id: '1', text: '', isOptional: false }]);
         onClose();
     };
 
@@ -77,7 +87,9 @@ const CreateChecklistTemplateModal: React.FC<CreateChecklistTemplateModalProps> 
                                 <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-sm">
                                     <CheckSquare className="h-5 w-5 text-emerald-400" />
                                 </div>
-                                <h2 className="text-xl font-bold text-white">Create Checklist Template</h2>
+                                <h2 className="text-xl font-bold text-white">
+                                    {initialData ? 'Edit Checklist Template' : 'Create Checklist Template'}
+                                </h2>
                             </div>
                             <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
                                 <X className="h-5 w-5" />
@@ -188,7 +200,7 @@ const CreateChecklistTemplateModal: React.FC<CreateChecklistTemplateModalProps> 
                                 disabled={isSubmitting}
                                 className="px-4 py-2 bg-white text-black font-medium rounded-sm hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
-                                {isSubmitting ? 'Creating...' : 'Create Template'}
+                                {isSubmitting ? 'Saving...' : (initialData ? 'Update Template' : 'Create Template')}
                             </button>
                         </div>
                     </motion.div>

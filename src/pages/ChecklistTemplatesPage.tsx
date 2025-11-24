@@ -20,6 +20,7 @@ import {
     getChecklistTemplates,
     createChecklistTemplate,
     deleteChecklistTemplate,
+    updateChecklistTemplate,
     startChecklistRun,
     ChecklistTemplate
 } from '../services/checklistService';
@@ -32,6 +33,7 @@ const ChecklistTemplatesPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<'all' | 'deployment' | 'incident'>('all');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [editingTemplate, setEditingTemplate] = useState<ChecklistTemplate | null>(null);
 
     useEffect(() => {
         loadTemplates();
@@ -44,9 +46,24 @@ const ChecklistTemplatesPage: React.FC = () => {
         setIsLoading(false);
     };
 
-    const handleCreateTemplate = async (data: any) => {
-        await createChecklistTemplate(data);
+    const handleSaveTemplate = async (data: any) => {
+        if (editingTemplate) {
+            await updateChecklistTemplate(editingTemplate.id, data);
+        } else {
+            await createChecklistTemplate(data);
+        }
         await loadTemplates();
+        setEditingTemplate(null);
+    };
+
+    const openCreateModal = () => {
+        setEditingTemplate(null);
+        setIsCreateModalOpen(true);
+    };
+
+    const openEditModal = (template: ChecklistTemplate) => {
+        setEditingTemplate(template);
+        setIsCreateModalOpen(true);
     };
 
     const handleStartRun = async (templateId: string) => {
@@ -89,7 +106,7 @@ const ChecklistTemplatesPage: React.FC = () => {
                         </p>
                     </div>
                     <button
-                        onClick={() => setIsCreateModalOpen(true)}
+                        onClick={openCreateModal}
                         className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-sm font-medium hover:bg-zinc-200 transition-colors"
                     >
                         <Plus className="h-4 w-4" />
@@ -134,7 +151,13 @@ const ChecklistTemplatesPage: React.FC = () => {
                             transition={{ delay: index * 0.05 }}
                             className="group bg-zinc-900/30 border border-zinc-800 rounded-sm p-6 hover:bg-zinc-900/50 hover:border-zinc-700 transition-all relative"
                         >
-                            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                <button
+                                    onClick={() => openEditModal(template)}
+                                    className="p-2 text-zinc-600 hover:text-white transition-colors"
+                                >
+                                    <Edit2 className="h-4 w-4" />
+                                </button>
                                 <button
                                     onClick={() => handleDeleteTemplate(template.id)}
                                     className="p-2 text-zinc-600 hover:text-rose-400 transition-colors"
@@ -201,7 +224,8 @@ const ChecklistTemplatesPage: React.FC = () => {
             <CreateChecklistTemplateModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
-                onSubmit={handleCreateTemplate}
+                onSubmit={handleSaveTemplate}
+                initialData={editingTemplate}
             />
         </div>
     );
