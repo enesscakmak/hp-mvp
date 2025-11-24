@@ -91,8 +91,8 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                         exit={{ opacity: 0, y: dropdownPosition === 'bottom' ? 5 : -5 }}
                         transition={{ duration: 0.1 }}
                         className={clsx(
-                            "absolute left-0 right-0 bg-zinc-900 border border-zinc-800 rounded-sm shadow-xl overflow-hidden max-h-32 overflow-y-auto",
-                            dropdownPosition === 'bottom' ? "top-full mt-2 z-[100]" : "bottom-full mb-2 z-[100]"
+                            "absolute left-0 right-0 bg-zinc-900 border border-zinc-800 rounded-sm shadow-xl overflow-y-auto",
+                            dropdownPosition === 'bottom' ? "top-full mt-2 z-[100] max-h-24" : "bottom-full mb-2 z-[100] max-h-24"
                         )}
                     >
                         {options.map((option) => (

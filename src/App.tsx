@@ -6,6 +6,7 @@ import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailsPage from './pages/ProjectDetailsPage';
 import DeploymentsPage from './pages/DeploymentsPage';
 import DeploymentDetailsPage from './pages/DeploymentDetailsPage';
+import IncidentsPage from './pages/IncidentsPage';
 import LoginPage from './pages/LoginPage';
 import MarketingPage from './pages/MarketingPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -38,6 +39,7 @@ const AppRoutes = () => {
                     <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
                     <Route path="/deployments" element={<DeploymentsPage />} />
                     <Route path="/deployments/:deploymentId" element={<DeploymentDetailsPage />} />
+                    <Route path="/incidents" element={<IncidentsPage />} />
                     <Route path="incidents" element={<div className="p-4 text-white">Incidents Module (Coming Soon)</div>} />
                     <Route path="checklists" element={<div className="p-4 text-white">Checklists Module (Coming Soon)</div>} />
                 </Route>

@@ -63,9 +63,9 @@ const TriggerDeploymentModal: React.FC<TriggerDeploymentModalProps> = ({
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.95, y: 20 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-lg shadow-2xl overflow-hidden max-h-[80vh] flex flex-col"
+                            className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-lg shadow-2xl overflow-hidden"
                         >
-                            <div className="p-6 overflow-y-auto flex-1">
+                            <div className="p-6">
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-sm">
@@ -84,7 +84,7 @@ const TriggerDeploymentModal: React.FC<TriggerDeploymentModalProps> = ({
                                     </div>
                                 )}
 
-                                <form onSubmit={handleSubmit} className="space-y-4">
+                                <form onSubmit={handleSubmit} className="space-y-4 pb-6">
                                     <div>
                                         <label className="block text-sm font-medium text-zinc-400 mb-1">Project</label>
                                         <CustomDropdown
