@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard';
 import ProjectsPage from './pages/ProjectsPage';
+import ProjectDetailsPage from './pages/ProjectDetailsPage';
 import LoginPage from './pages/LoginPage';
 import MarketingPage from './pages/MarketingPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -32,6 +33,7 @@ const AppRoutes = () => {
                 <Route element={<Layout />}>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/projects" element={<ProjectsPage />} />
+                    <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
                     <Route path="deployments" element={<div className="p-4 text-white">Deployments Module (Coming Soon)</div>} />
                     <Route path="incidents" element={<div className="p-4 text-white">Incidents Module (Coming Soon)</div>} />
                     <Route path="checklists" element={<div className="p-4 text-white">Checklists Module (Coming Soon)</div>} />
