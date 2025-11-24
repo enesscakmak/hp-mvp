@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import {
     Rocket,
     Search,
@@ -255,64 +256,65 @@ const DeploymentsPage: React.FC = () => {
                 {/* Deployments List */}
                 <div className="space-y-4">
                     {filteredDeployments.map((dep, index) => (
-                        <motion.div
-                            key={dep.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            className="group bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 hover:bg-zinc-900/50 hover:border-zinc-700 transition-all"
-                        >
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <Link key={dep.id} to={`/deployments/${dep.id}`}>
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="group bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 hover:bg-zinc-900/50 hover:border-zinc-700 transition-all cursor-pointer"
+                            >
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
-                                {/* Left: Status & Project Info */}
-                                <div className="flex items-start gap-4">
-                                    <div className={clsx("mt-1 p-2 rounded-full bg-zinc-900 border border-zinc-800",
-                                        dep.status === 'building' && "animate-pulse"
-                                    )}>
-                                        {getStatusIcon(dep.status)}
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h3 className="text-white font-medium">{dep.project}</h3>
-                                            <span className="text-zinc-600 text-xs">•</span>
-                                            <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
-                                                dep.environment === 'production' ? "bg-purple-500/10 text-purple-400" :
-                                                    dep.environment === 'staging' ? "bg-amber-500/10 text-amber-400" :
-                                                        "bg-blue-500/10 text-blue-400"
-                                            )}>
-                                                {dep.environment}
-                                            </span>
+                                    {/* Left: Status & Project Info */}
+                                    <div className="flex items-start gap-4">
+                                        <div className={clsx("mt-1 p-2 rounded-full bg-zinc-900 border border-zinc-800",
+                                            dep.status === 'building' && "animate-pulse"
+                                        )}>
+                                            {getStatusIcon(dep.status)}
                                         </div>
-                                        <div className="flex items-center gap-2 text-sm text-zinc-400">
-                                            <GitCommit className="h-3 w-3" />
-                                            <span className="font-mono text-zinc-500">{dep.commitHash}</span>
-                                            <span className="text-zinc-300">{dep.commitMessage}</span>
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="text-white font-medium">{dep.project}</h3>
+                                                <span className="text-zinc-600 text-xs">•</span>
+                                                <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
+                                                    dep.environment === 'production' ? "bg-purple-500/10 text-purple-400" :
+                                                        dep.environment === 'staging' ? "bg-amber-500/10 text-amber-400" :
+                                                            "bg-blue-500/10 text-blue-400"
+                                                )}>
+                                                    {dep.environment}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-zinc-400">
+                                                <GitCommit className="h-3 w-3" />
+                                                <span className="font-mono text-zinc-500">{dep.commitHash}</span>
+                                                <span className="text-zinc-300">{dep.commitMessage}</span>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    {/* Right: Meta Info */}
+                                    <div className="flex items-center gap-6 text-sm text-zinc-500 font-mono">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-300 uppercase">
+                                                {dep.author.substring(0, 2)}
+                                            </div>
+                                            <span>{dep.author}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{dep.timestamp}</span>
+                                        </div>
+                                        <div className="w-20 text-right">
+                                            {dep.duration}
+                                        </div>
+                                        <button className="p-2 hover:bg-zinc-800 rounded-sm text-zinc-500 hover:text-white transition-colors">
+                                            <ExternalLink className="h-4 w-4" />
+                                        </button>
+                                    </div>
+
                                 </div>
-
-                                {/* Right: Meta Info */}
-                                <div className="flex items-center gap-6 text-sm text-zinc-500 font-mono">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-300 uppercase">
-                                            {dep.author.substring(0, 2)}
-                                        </div>
-                                        <span>{dep.author}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <Clock className="h-3 w-3" />
-                                        <span>{dep.timestamp}</span>
-                                    </div>
-                                    <div className="w-20 text-right">
-                                        {dep.duration}
-                                    </div>
-                                    <button className="p-2 hover:bg-zinc-800 rounded-sm text-zinc-500 hover:text-white transition-colors">
-                                        <ExternalLink className="h-4 w-4" />
-                                    </button>
-                                </div>
-
-                            </div>
-                        </motion.div>
+                            </motion.div>
+                        </Link>
                     ))}
 
                     {filteredDeployments.length === 0 && (
