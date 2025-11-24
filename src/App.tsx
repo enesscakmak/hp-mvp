@@ -9,6 +9,7 @@ import DeploymentDetailsPage from './pages/DeploymentDetailsPage';
 import IncidentsPage from './pages/IncidentsPage';
 import IncidentDetailsPage from './pages/IncidentDetailsPage';
 import ChecklistTemplatesPage from './pages/ChecklistTemplatesPage';
+import ChecklistRunPage from './pages/ChecklistRunPage';
 import LoginPage from './pages/LoginPage';
 import MarketingPage from './pages/MarketingPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -44,6 +45,7 @@ const AppRoutes = () => {
                     <Route path="/incidents" element={<IncidentsPage />} />
                     <Route path="/incidents/:incidentId" element={<IncidentDetailsPage />} />
                     <Route path="/checklists" element={<ChecklistTemplatesPage />} />
+                    <Route path="/checklists/run/:runId" element={<ChecklistRunPage />} />
                     <Route path="incidents" element={<div className="p-4 text-white">Incidents Module (Coming Soon)</div>} />
                     <Route path="checklists" element={<div className="p-4 text-white">Checklists Module (Coming Soon)</div>} />
                 </Route>

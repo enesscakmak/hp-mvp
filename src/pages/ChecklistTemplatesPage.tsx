@@ -10,7 +10,8 @@ import {
     MoreVertical,
     Trash2,
     Edit2,
-    Copy
+    Copy,
+    ChevronRight
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import CustomDropdown from '../components/CustomDropdown';
@@ -19,10 +20,13 @@ import {
     getChecklistTemplates,
     createChecklistTemplate,
     deleteChecklistTemplate,
+    startChecklistRun,
     ChecklistTemplate
 } from '../services/checklistService';
+import { useNavigate } from 'react-router-dom';
 
 const ChecklistTemplatesPage: React.FC = () => {
+    const navigate = useNavigate();
     const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -43,6 +47,11 @@ const ChecklistTemplatesPage: React.FC = () => {
     const handleCreateTemplate = async (data: any) => {
         await createChecklistTemplate(data);
         await loadTemplates();
+    };
+
+    const handleStartRun = async (templateId: string) => {
+        const run = await startChecklistRun(templateId);
+        navigate(`/checklists/run/${run.id}`);
     };
 
     const handleDeleteTemplate = async (id: string) => {
@@ -166,9 +175,15 @@ const ChecklistTemplatesPage: React.FC = () => {
                                 )}
                             </div>
 
-                            <div className="pt-4 border-t border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-500">
-                                <span>{template.steps.length} Steps</span>
-                                <span>Updated {new Date(template.updatedAt).toLocaleDateString()}</span>
+                            <div className="pt-4 border-t border-zinc-800 flex items-center justify-between">
+                                <span className="text-xs font-mono text-zinc-500">{template.steps.length} Steps</span>
+                                <button
+                                    onClick={() => handleStartRun(template.id)}
+                                    className="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1"
+                                >
+                                    Start Run
+                                    <ChevronRight className="h-3 w-3" />
+                                </button>
                             </div>
                         </motion.div>
                     ))}

@@ -112,3 +112,117 @@ export const deleteChecklistTemplate = async (id: string): Promise<void> => {
     const filtered = templates.filter(t => t.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
 };
+
+// Checklist Runs
+
+export interface ChecklistRunStep {
+    id: string;
+    text: string;
+    isOptional: boolean;
+    isCompleted: boolean;
+    completedAt?: string;
+    completedBy?: string;
+}
+
+export interface ChecklistRun {
+    id: string;
+    templateId: string;
+    title: string;
+    status: 'active' | 'completed';
+    steps: ChecklistRunStep[];
+    progress: number;
+    startedAt: string;
+    completedAt?: string;
+    startedBy: string;
+}
+
+const RUNS_STORAGE_KEY = 'hp_checklist_runs';
+
+const initializeRuns = (): ChecklistRun[] => {
+    const stored = localStorage.getItem(RUNS_STORAGE_KEY);
+    if (stored) {
+        return JSON.parse(stored);
+    }
+    return [];
+};
+
+export const startChecklistRun = async (templateId: string): Promise<ChecklistRun> => {
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    const template = await getChecklistTemplateById(templateId);
+    if (!template) throw new Error('Template not found');
+
+    const runs = initializeRuns();
+    const newRun: ChecklistRun = {
+        id: `run-${Date.now()}`,
+        templateId: template.id,
+        title: template.title,
+        status: 'active',
+        steps: template.steps.map(s => ({
+            ...s,
+            isCompleted: false
+        })),
+        progress: 0,
+        startedAt: new Date().toISOString(),
+        startedBy: 'enes' // Mock user
+    };
+
+    runs.unshift(newRun);
+    localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
+
+    return newRun;
+};
+
+export const getChecklistRunById = async (id: string): Promise<ChecklistRun | undefined> => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const runs = initializeRuns();
+    return runs.find(r => r.id === id);
+};
+
+export const toggleStepCompletion = async (runId: string, stepId: string, isCompleted: boolean): Promise<ChecklistRun> => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    const runs = initializeRuns();
+    const index = runs.findIndex(r => r.id === runId);
+
+    if (index === -1) throw new Error('Run not found');
+
+    const run = runs[index];
+    const stepIndex = run.steps.findIndex(s => s.id === stepId);
+
+    if (stepIndex === -1) throw new Error('Step not found');
+
+    run.steps[stepIndex] = {
+        ...run.steps[stepIndex],
+        isCompleted,
+        completedAt: isCompleted ? new Date().toISOString() : undefined,
+        completedBy: isCompleted ? 'enes' : undefined
+    };
+
+    // Calculate progress
+    const totalSteps = run.steps.length;
+    const completedSteps = run.steps.filter(s => s.isCompleted).length;
+    run.progress = Math.round((completedSteps / totalSteps) * 100);
+
+    localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
+    return run;
+};
+
+export const completeChecklistRun = async (runId: string): Promise<ChecklistRun> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const runs = initializeRuns();
+    const index = runs.findIndex(r => r.id === runId);
+
+    if (index === -1) throw new Error('Run not found');
+
+    runs[index] = {
+        ...runs[index],
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        progress: 100
+    };
+
+    localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
+    return runs[index];
+};
