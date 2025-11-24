@@ -18,6 +18,7 @@ import {
     completeChecklistRun,
     ChecklistRun
 } from '../services/checklistService';
+import { toast } from 'sonner';
 
 const ChecklistRunPage: React.FC = () => {
     const { runId } = useParams();
@@ -35,7 +36,7 @@ const ChecklistRunPage: React.FC = () => {
     const loadRun = async (id: string) => {
         setIsLoading(true);
         const data = await getChecklistRunById(id);
-        setRun(data);
+        setRun(data || null);
         setIsLoading(false);
     };
 
@@ -61,6 +62,7 @@ const ChecklistRunPage: React.FC = () => {
         setIsCompleting(true);
         const updated = await completeChecklistRun(run.id);
         setRun(updated);
+        toast.success('Checklist completed');
         setIsCompleting(false);
     };
 

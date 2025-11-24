@@ -50,6 +50,7 @@ const ProjectsPage: React.FC = () => {
     };
 
     const filteredProjects = projects.filter(project => {
+        if (!project) return false;
         const matchesSearch = project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             project.description.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesFilter = filterStatus === 'all' || project.status === filterStatus;

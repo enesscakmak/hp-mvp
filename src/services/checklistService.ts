@@ -134,6 +134,8 @@ export interface ChecklistRun {
     startedAt: string;
     completedAt?: string;
     startedBy: string;
+    targetId?: string;
+    targetType?: 'deployment' | 'incident';
 }
 
 const RUNS_STORAGE_KEY = 'hp_checklist_runs';
@@ -146,7 +148,7 @@ const initializeRuns = (): ChecklistRun[] => {
     return [];
 };
 
-export const startChecklistRun = async (templateId: string): Promise<ChecklistRun> => {
+export const startChecklistRun = async (templateId: string, targetId?: string, targetType?: 'deployment' | 'incident'): Promise<ChecklistRun> => {
     await new Promise(resolve => setTimeout(resolve, 400));
 
     const template = await getChecklistTemplateById(templateId);
@@ -164,13 +166,21 @@ export const startChecklistRun = async (templateId: string): Promise<ChecklistRu
         })),
         progress: 0,
         startedAt: new Date().toISOString(),
-        startedBy: 'enes' // Mock user
+        startedBy: 'enes', // Mock user
+        targetId,
+        targetType
     };
 
     runs.unshift(newRun);
     localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
 
     return newRun;
+};
+
+export const getChecklistRunsByTarget = async (targetId: string): Promise<ChecklistRun[]> => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const runs = initializeRuns();
+    return runs.filter(r => r.targetId === targetId);
 };
 
 export const getChecklistRunById = async (id: string): Promise<ChecklistRun | undefined> => {

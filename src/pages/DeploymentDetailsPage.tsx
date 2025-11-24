@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ChevronRight, Rocket, CheckCircle2, XCircle, Loader2, Clock, GitCommit, AlertTriangle, Github, RotateCcw, Terminal, Activity } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getIncidentsByDeploymentId, Incident } from '../services/incidentService';
+import ChecklistSection from '../components/ChecklistSection';
 
 const DeploymentDetailsPage: React.FC = () => {
     const { deploymentId } = useParams();
@@ -122,8 +123,9 @@ const DeploymentDetailsPage: React.FC = () => {
 
     const deployment = getMockDeployment(deploymentId);
 
+    if (!deployment) return <div>Deployment not found</div>;
 
-    const getStatusIcon = (status: 'success' | 'failed' | 'building' | 'queued') => {
+    const getStatusIcon = (status: string) => {
         switch (status) {
             case 'success': return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
             case 'failed': return <XCircle className="h-5 w-5 text-rose-500" />;
@@ -132,7 +134,7 @@ const DeploymentDetailsPage: React.FC = () => {
         }
     };
 
-    const getStatusColor = (status: 'success' | 'failed' | 'building' | 'queued') => {
+    const getStatusColor = (status: string) => {
         switch (status) {
             case 'success': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
             case 'failed': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
@@ -353,6 +355,11 @@ const DeploymentDetailsPage: React.FC = () => {
                     )}
                 </motion.div>
 
+                {/* Checklists Section */}
+                <div className="mt-8">
+                    <ChecklistSection targetId={deployment.id} targetType="deployment" />
+                </div>
+
                 {/* Incidents Section */}
                 {incidents.length > 0 && (
                     <div className="mt-8">
@@ -362,11 +369,15 @@ const DeploymentDetailsPage: React.FC = () => {
                         </h2>
                         <div className="space-y-3">
                             {incidents.map((incident) => (
-                                <div key={incident.id} className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 hover:bg-zinc-900/50 transition-colors">
+                                <Link
+                                    key={incident.id}
+                                    to={`/incidents/${incident.id}`}
+                                    className="block bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 hover:bg-zinc-900/50 transition-colors group"
+                                >
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-2">
-                                                <h3 className="font-medium text-white">{incident.title}</h3>
+                                                <h3 className="font-medium text-white group-hover:text-emerald-400 transition-colors">{incident.title}</h3>
                                                 <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
                                                     incident.severity === 'critical' ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
                                                         incident.severity === 'high' ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" :
@@ -390,8 +401,9 @@ const DeploymentDetailsPage: React.FC = () => {
                                                 {incident.assignedTo && <span>• Assigned to {incident.assignedTo}</span>}
                                             </div>
                                         </div>
+                                        <ChevronRight className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     </div>

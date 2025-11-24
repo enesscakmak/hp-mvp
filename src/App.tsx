@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from 'sonner';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard';
@@ -12,6 +13,7 @@ import ChecklistTemplatesPage from './pages/ChecklistTemplatesPage';
 import ChecklistRunPage from './pages/ChecklistRunPage';
 import LoginPage from './pages/LoginPage';
 import MarketingPage from './pages/MarketingPage'
+import NotFoundPage from './pages/NotFoundPage';
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 const queryClient = new QueryClient()
@@ -46,8 +48,7 @@ const AppRoutes = () => {
                     <Route path="/incidents/:incidentId" element={<IncidentDetailsPage />} />
                     <Route path="/checklists" element={<ChecklistTemplatesPage />} />
                     <Route path="/checklists/run/:runId" element={<ChecklistRunPage />} />
-                    <Route path="incidents" element={<div className="p-4 text-white">Incidents Module (Coming Soon)</div>} />
-                    <Route path="checklists" element={<div className="p-4 text-white">Checklists Module (Coming Soon)</div>} />
+                    <Route path="*" element={<NotFoundPage />} />
                 </Route>
             )}
         </Routes>
@@ -60,6 +61,7 @@ function App() {
             <AuthProvider>
                 <BrowserRouter>
                     <AppRoutes />
+                    <Toaster theme="dark" position="top-right" />
                 </BrowserRouter>
             </AuthProvider>
         </QueryClientProvider>

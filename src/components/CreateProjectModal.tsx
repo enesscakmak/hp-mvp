@@ -4,6 +4,7 @@ import { X, Loader2 } from 'lucide-react';
 import { projectService } from '../services/projectService';
 import CustomDropdown from './CustomDropdown';
 import { Project } from './ProjectCard';
+import { toast } from 'sonner';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -12,25 +13,33 @@ interface CreateProjectModalProps {
 }
 
 const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose, onProjectCreated }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    framework: 'react' as Project['framework']
-  });
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [framework, setFramework] = useState('react');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
-      const newProject = await projectService.createProject(formData);
+      const newProject = await projectService.createProject({
+        name,
+        description,
+        framework: framework as any,
+        repoUrl: ''
+      });
+      toast.success('Project created successfully');
       onProjectCreated(newProject);
       onClose();
-      setFormData({ name: '', description: '', framework: 'react' });
+      // Reset form
+      setName('');
+      setDescription('');
+      setFramework('react');
     } catch (error) {
-      console.error('Failed to create project', error);
+      console.error('Failed to create project:', error);
+      toast.error('Failed to create project');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -66,8 +75,8 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
                     <input
                       type="text"
                       required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
                       className="w-full bg-zinc-900/50 border border-zinc-800 rounded-sm px-3 py-2 text-white focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
                       placeholder="e.g. auth-service"
                     />
@@ -77,8 +86,8 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Description</label>
                     <textarea
                       required
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
                       className="w-full bg-zinc-900/50 border border-zinc-800 rounded-sm px-3 py-2 text-white focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
                       rows={3}
                       placeholder="Brief description of the service..."
@@ -88,8 +97,8 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
                   <div>
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Framework</label>
                     <CustomDropdown
-                      value={formData.framework}
-                      onChange={(value) => setFormData({ ...formData, framework: value as any })}
+                      value={framework}
+                      onChange={(value) => setFramework(value)}
                       options={[
                         { value: 'react', label: 'React' },
                         { value: 'node', label: 'Node.js' },
@@ -109,10 +118,10 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
                     </button>
                     <button
                       type="submit"
-                      disabled={isLoading}
+                      disabled={isSubmitting}
                       className="flex items-center gap-2 px-4 py-2 bg-white text-black text-sm font-medium rounded-sm hover:bg-zinc-200 transition-colors disabled:opacity-50"
                     >
-                      {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       Create Project
                     </button>
                   </div>

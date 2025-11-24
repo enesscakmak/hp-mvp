@@ -15,6 +15,8 @@ import {
 import { clsx } from 'clsx';
 import { getIncidentById, Incident, resolveIncident, closeIncident, reassignIncident } from '../services/incidentService';
 import { AnimatePresence } from 'framer-motion';
+import ChecklistSection from '../components/ChecklistSection';
+import { toast } from 'sonner';
 
 const IncidentDetailsPage: React.FC = () => {
     const { incidentId } = useParams();
@@ -40,12 +42,14 @@ const IncidentDetailsPage: React.FC = () => {
         if (!incident) return;
         const updated = await resolveIncident(incident.id);
         setIncident(updated);
+        toast.success('Incident resolved');
     };
 
     const handleClose = async () => {
         if (!incident) return;
         const updated = await closeIncident(incident.id);
         setIncident(updated);
+        toast.success('Incident closed');
     };
 
     const handleReassign = async (e: React.FormEvent) => {
@@ -55,6 +59,7 @@ const IncidentDetailsPage: React.FC = () => {
         setIncident(updated);
         setIsReassignModalOpen(false);
         setReassignTo('');
+        toast.success(`Incident reassigned to ${updated.assignedTo}`);
     };
 
     const getSeverityColor = (severity: Incident['severity']) => {
@@ -249,6 +254,9 @@ const IncidentDetailsPage: React.FC = () => {
                                 )}
                             </div>
                         </div>
+
+                        {/* Checklists */}
+                        <ChecklistSection targetId={incident.id} targetType="incident" />
 
                         {/* Related Deployment */}
                         {incident.deploymentId && (

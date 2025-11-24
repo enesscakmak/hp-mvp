@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Rocket, Loader2 } from 'lucide-react';
 import { createDeployment } from '../services/deploymentService';
 import CustomDropdown from './CustomDropdown';
+import { toast } from 'sonner';
 
 interface TriggerDeploymentModalProps {
     isOpen: boolean;
@@ -33,6 +34,7 @@ const TriggerDeploymentModal: React.FC<TriggerDeploymentModalProps> = ({
         try {
             await createDeployment(formData);
             setIsLoading(false);
+            toast.success('Deployment triggered successfully');
             onSuccess();
             onClose();
             // Reset form
@@ -43,6 +45,7 @@ const TriggerDeploymentModal: React.FC<TriggerDeploymentModalProps> = ({
             });
         } catch (err) {
             setError('Failed to trigger deployment');
+            toast.error('Failed to trigger deployment');
             setIsLoading(false);
         }
     };

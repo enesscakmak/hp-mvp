@@ -2,8 +2,13 @@ import React from 'react';
 import { FolderKanban, Rocket, AlertTriangle, CheckSquare, Activity, Clock, Terminal } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
 
 const Dashboard: React.FC = () => {
+    const navigate = useNavigate();
+    const [isDeployModalOpen, setIsDeployModalOpen] = React.useState(false);
+
     const container = {
         hidden: { opacity: 0 },
         show: {
@@ -51,6 +56,7 @@ const Dashboard: React.FC = () => {
                         trend="+2"
                         trendUp={true}
                         icon={FolderKanban}
+                        to="/projects"
                     />
                     <StatCard
                         title="Deployments (24h)"
@@ -58,6 +64,7 @@ const Dashboard: React.FC = () => {
                         trend="+15%"
                         trendUp={true}
                         icon={Rocket}
+                        to="/deployments"
                     />
                     <StatCard
                         title="Open Incidents"
@@ -65,6 +72,7 @@ const Dashboard: React.FC = () => {
                         trend="-1"
                         trendUp={false}
                         icon={AlertTriangle}
+                        to="/incidents"
                     />
                     <StatCard
                         title="Checklists Run"
@@ -72,6 +80,7 @@ const Dashboard: React.FC = () => {
                         trend="+12%"
                         trendUp={true}
                         icon={CheckSquare}
+                        to="/checklists"
                     />
                 </motion.div>
 
@@ -85,7 +94,10 @@ const Dashboard: React.FC = () => {
                                 <Activity className="h-5 w-5 text-zinc-500" />
                                 Live Feed
                             </h2>
-                            <button className="text-xs font-mono text-zinc-500 hover:text-white transition-colors uppercase tracking-wider">
+                            <button
+                                onClick={() => navigate('/deployments')}
+                                className="text-xs font-mono text-zinc-500 hover:text-white transition-colors uppercase tracking-wider"
+                            >
                                 View All
                             </button>
                         </div>
@@ -156,11 +168,17 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <button className="p-4 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900 transition-all rounded-sm text-left group">
+                            <button
+                                onClick={() => setIsDeployModalOpen(true)}
+                                className="p-4 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900 transition-all rounded-sm text-left group"
+                            >
                                 <Rocket className="h-5 w-5 text-zinc-500 group-hover:text-white mb-2 transition-colors" />
                                 <span className="text-xs font-mono text-zinc-400 group-hover:text-white block">NEW DEPLOY</span>
                             </button>
-                            <button className="p-4 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900 transition-all rounded-sm text-left group">
+                            <button
+                                onClick={() => navigate('/incidents')}
+                                className="p-4 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900 transition-all rounded-sm text-left group"
+                            >
                                 <AlertTriangle className="h-5 w-5 text-zinc-500 group-hover:text-white mb-2 transition-colors" />
                                 <span className="text-xs font-mono text-zinc-400 group-hover:text-white block">REPORT INCIDENT</span>
                             </button>
@@ -169,6 +187,14 @@ const Dashboard: React.FC = () => {
 
                 </div>
             </motion.div>
+
+            <TriggerDeploymentModal
+                isOpen={isDeployModalOpen}
+                onClose={() => setIsDeployModalOpen(false)}
+                onSuccess={() => {
+                    // Refresh data if needed, or just let the toast handle feedback
+                }}
+            />
         </div>
     );
 };
