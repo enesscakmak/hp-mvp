@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
     ChevronRight,
@@ -11,31 +11,102 @@ import {
     Settings,
     LayoutDashboard,
     ExternalLink,
-    Github
+    Github,
+    Loader2,
+    Trash2
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import StatCard from '../components/StatCard';
+import { projectService } from '../services/projectService';
+import { Project } from '../components/ProjectCard';
 
 const ProjectDetailsPage: React.FC = () => {
     const { projectId } = useParams();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'overview' | 'deployments' | 'incidents' | 'settings'>('overview');
+    const [project, setProject] = useState<Project | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    // Mock Data (In a real app, fetch based on projectId)
-    const project = {
-        id: projectId,
-        name: 'auth-service',
-        description: 'Centralized authentication and authorization service handling JWT tokens and user sessions.',
-        status: 'healthy',
-        repo: 'github.com/org/auth-service',
-        lastDeploy: '2h ago',
-        framework: 'go',
-        stats: {
-            uptime: '99.99%',
-            errorRate: '0.01%',
-            avgLatency: '45ms',
-            activeUsers: '12.5k'
+    // Form State
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        repoUrl: ''
+    });
+
+    useEffect(() => {
+        if (projectId) {
+            loadProject(projectId);
+        }
+    }, [projectId]);
+
+    const loadProject = async (id: string) => {
+        try {
+            const data = await projectService.getProjectById(id);
+            if (data) {
+                setProject(data);
+                setFormData({
+                    name: data.name,
+                    description: data.description,
+                    repoUrl: data.repoUrl || ''
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load project', error);
+        } finally {
+            setIsLoading(false);
         }
     };
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!project) return;
+
+        setIsSaving(true);
+        try {
+            const updated = await projectService.updateProject(project.id, formData);
+            setProject(updated);
+            // Optional: Show success toast
+        } catch (error) {
+            console.error('Failed to update project', error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!project || !window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) return;
+
+        setIsDeleting(true);
+        try {
+            await projectService.deleteProject(project.id);
+            navigate('/projects');
+        } catch (error) {
+            console.error('Failed to delete project', error);
+            setIsDeleting(false);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+            </div>
+        );
+    }
+
+    if (!project) {
+        return (
+            <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-white">
+                <h2 className="text-xl font-bold mb-2">Project Not Found</h2>
+                <Link to="/projects" className="text-zinc-500 hover:text-white transition-colors">
+                    Return to Projects
+                </Link>
+            </div>
+        );
+    }
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -43,6 +114,14 @@ const ProjectDetailsPage: React.FC = () => {
         { id: 'incidents', label: 'Incidents', icon: AlertTriangle },
         { id: 'settings', label: 'Settings', icon: Settings },
     ];
+
+    // Mock stats for now (since they aren't in the project model yet)
+    const stats = {
+        uptime: '99.99%',
+        errorRate: '0.01%',
+        avgLatency: '45ms',
+        activeUsers: '12.5k'
+    };
 
     return (
         <div className="min-h-screen bg-zinc-950 text-white">
@@ -64,7 +143,11 @@ const ProjectDetailsPage: React.FC = () => {
                             <div>
                                 <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
                                     {project.name}
-                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-mono border border-emerald-500/20 uppercase">
+                                    <span className={clsx("px-2 py-0.5 rounded-full text-xs font-mono border uppercase",
+                                        project.status === 'healthy' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                            project.status === 'warning' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                                                "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                    )}>
                                         {project.status}
                                     </span>
                                 </h1>
@@ -74,15 +157,17 @@ const ProjectDetailsPage: React.FC = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <a
-                                href={`https://${project.repo}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-sm text-sm font-medium text-zinc-300 hover:text-white hover:border-zinc-700 transition-all"
-                            >
-                                <Github className="h-4 w-4" />
-                                <span>Repo</span>
-                            </a>
+                            {project.repoUrl && (
+                                <a
+                                    href={`https://${project.repoUrl}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-sm text-sm font-medium text-zinc-300 hover:text-white hover:border-zinc-700 transition-all"
+                                >
+                                    <Github className="h-4 w-4" />
+                                    <span>Repo</span>
+                                </a>
+                            )}
                             <button className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-sm text-sm font-medium hover:bg-zinc-200 transition-colors">
                                 <Rocket className="h-4 w-4" />
                                 <span>Deploy</span>
@@ -125,28 +210,28 @@ const ProjectDetailsPage: React.FC = () => {
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                 <StatCard
                                     title="Uptime (30d)"
-                                    value={project.stats.uptime}
+                                    value={stats.uptime}
                                     trend="+0.01%"
                                     trendUp={true}
                                     icon={Activity}
                                 />
                                 <StatCard
                                     title="Error Rate"
-                                    value={project.stats.errorRate}
+                                    value={stats.errorRate}
                                     trend="-0.05%"
                                     trendUp={true}
                                     icon={AlertTriangle}
                                 />
                                 <StatCard
                                     title="Avg Latency"
-                                    value={project.stats.avgLatency}
+                                    value={stats.avgLatency}
                                     trend="+2ms"
                                     trendUp={false}
                                     icon={Clock}
                                 />
                                 <StatCard
                                     title="Active Users"
-                                    value={project.stats.activeUsers}
+                                    value={stats.activeUsers}
                                     trend="+12%"
                                     trendUp={true}
                                     icon={LayoutDashboard}
@@ -160,16 +245,14 @@ const ProjectDetailsPage: React.FC = () => {
                                         <h3 className="text-lg font-bold text-white mb-4">About</h3>
                                         <div className="prose prose-invert max-w-none">
                                             <p className="text-zinc-400 text-sm leading-relaxed">
-                                                This service handles all user authentication and authorization logic.
-                                                It communicates with the primary PostgreSQL database and Redis for session management.
-                                                Recent updates include support for OIDC and improved rate limiting.
+                                                {project.description}
                                             </p>
                                         </div>
 
                                         <div className="mt-6 pt-6 border-t border-zinc-800 grid grid-cols-2 gap-4">
                                             <div>
                                                 <p className="text-xs font-mono text-zinc-500 uppercase mb-1">Framework</p>
-                                                <p className="text-white font-mono">{project.framework}</p>
+                                                <p className="text-white font-mono uppercase">{project.framework}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs font-mono text-zinc-500 uppercase mb-1">Last Deploy</p>
@@ -223,17 +306,51 @@ const ProjectDetailsPage: React.FC = () => {
                         <div className="max-w-2xl">
                             <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-8">
                                 <h3 className="text-lg font-bold text-white mb-6">Project Settings</h3>
-                                <form className="space-y-6">
+                                <form onSubmit={handleUpdate} className="space-y-6">
                                     <div>
                                         <label className="block text-sm font-medium text-zinc-400 mb-2">Project Name</label>
-                                        <input type="text" defaultValue={project.name} className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600" />
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-zinc-400 mb-2">Description</label>
-                                        <textarea rows={3} defaultValue={project.description} className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600" />
+                                        <textarea
+                                            rows={3}
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
+                                        />
                                     </div>
-                                    <div className="pt-4 border-t border-zinc-800">
-                                        <button type="button" className="px-4 py-2 bg-white text-black font-medium rounded-sm hover:bg-zinc-200 transition-colors">
+                                    <div>
+                                        <label className="block text-sm font-medium text-zinc-400 mb-2">Repository URL</label>
+                                        <input
+                                            type="text"
+                                            value={formData.repoUrl}
+                                            onChange={(e) => setFormData({ ...formData, repoUrl: e.target.value })}
+                                            placeholder="github.com/org/repo"
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
+                                        />
+                                    </div>
+                                    <div className="pt-4 border-t border-zinc-800 flex justify-between items-center">
+                                        <button
+                                            type="button"
+                                            onClick={handleDelete}
+                                            disabled={isDeleting}
+                                            className="px-4 py-2 bg-rose-500/10 text-rose-400 font-medium rounded-sm hover:bg-rose-500/20 transition-colors flex items-center gap-2"
+                                        >
+                                            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                            Delete Project
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={isSaving}
+                                            className="px-4 py-2 bg-white text-black font-medium rounded-sm hover:bg-zinc-200 transition-colors flex items-center gap-2"
+                                        >
+                                            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                                             Save Changes
                                         </button>
                                     </div>

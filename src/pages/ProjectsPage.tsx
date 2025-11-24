@@ -1,58 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Filter, LayoutGrid, List, ChevronDown } from 'lucide-react';
+import { Plus, Search, Filter, LayoutGrid, List, ChevronDown, Loader2 } from 'lucide-react';
 import ProjectCard, { Project } from '../components/ProjectCard';
+import CreateProjectModal from '../components/CreateProjectModal';
+import { projectService } from '../services/projectService';
 import { clsx } from 'clsx';
 
-// Mock Data
-const MOCK_PROJECTS: Project[] = [
-    {
-        id: '1',
-        name: 'auth-service',
-        description: 'Centralized authentication and authorization service handling JWT tokens and user sessions.',
-        status: 'healthy',
-        lastDeploy: '2h ago',
-        framework: 'go',
-    },
-    {
-        id: '2',
-        name: 'payment-gateway',
-        description: 'Stripe integration wrapper for processing recurring subscriptions and one-time payments.',
-        status: 'warning',
-        lastDeploy: '5m ago',
-        framework: 'node',
-    },
-    {
-        id: '3',
-        name: 'frontend-dashboard',
-        description: 'Main customer-facing dashboard built with React and Vite.',
-        status: 'healthy',
-        lastDeploy: '1d ago',
-        framework: 'react',
-    },
-    {
-        id: '4',
-        name: 'data-pipeline',
-        description: 'ETL pipeline for processing user analytics and generating daily reports.',
-        status: 'down',
-        lastDeploy: '3d ago',
-        framework: 'python',
-    },
-    {
-        id: '5',
-        name: 'notification-worker',
-        description: 'Background worker for sending emails and push notifications via SQS.',
-        status: 'healthy',
-        lastDeploy: '12h ago',
-        framework: 'go',
-    },
-];
-
 const ProjectsPage: React.FC = () => {
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'healthy' | 'warning' | 'down'>('all');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    useEffect(() => {
+        loadProjects();
+    }, []);
+
+    const loadProjects = async () => {
+        try {
+            const data = await projectService.getProjects();
+            setProjects(data);
+        } catch (error) {
+            console.error('Failed to load projects', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleProjectCreated = (newProject: Project) => {
+        setProjects([...projects, newProject]);
+    };
 
     const container = {
         hidden: { opacity: 0 },
@@ -69,7 +49,7 @@ const ProjectsPage: React.FC = () => {
         show: { opacity: 1, y: 0 }
     };
 
-    const filteredProjects = MOCK_PROJECTS.filter(project => {
+    const filteredProjects = projects.filter(project => {
         const matchesSearch = project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             project.description.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesFilter = filterStatus === 'all' || project.status === filterStatus;
@@ -88,7 +68,10 @@ const ProjectsPage: React.FC = () => {
                             MANAGE_MICROSERVICES
                         </p>
                     </div>
-                    <button className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-sm font-medium hover:bg-zinc-200 transition-colors">
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-sm font-medium hover:bg-zinc-200 transition-colors"
+                    >
                         <Plus className="h-4 w-4" />
                         <span>New Project</span>
                     </button>
@@ -171,29 +154,41 @@ const ProjectsPage: React.FC = () => {
                 </div>
 
                 {/* Grid */}
-                <motion.div
-                    variants={container}
-                    initial="hidden"
-                    animate="show"
-                    className={clsx(
-                        "grid gap-6",
-                        viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
-                    )}
-                >
-                    {filteredProjects.map((project) => (
-                        <motion.div key={project.id} variants={item}>
-                            <ProjectCard project={project} />
-                        </motion.div>
-                    ))}
-                </motion.div>
+                {isLoading ? (
+                    <div className="flex justify-center py-20">
+                        <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+                    </div>
+                ) : (
+                    <motion.div
+                        variants={container}
+                        initial="hidden"
+                        animate="show"
+                        className={clsx(
+                            "grid gap-6",
+                            viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
+                        )}
+                    >
+                        {filteredProjects.map((project) => (
+                            <motion.div key={project.id} variants={item}>
+                                <ProjectCard project={project} />
+                            </motion.div>
+                        ))}
+                    </motion.div>
+                )}
 
-                {filteredProjects.length === 0 && (
+                {!isLoading && filteredProjects.length === 0 && (
                     <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
                         <p className="text-zinc-500 font-mono">NO_PROJECTS_FOUND</p>
                     </div>
                 )}
 
             </div>
+
+            <CreateProjectModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onProjectCreated={handleProjectCreated}
+            />
         </div>
     );
 };
