@@ -107,3 +107,34 @@ export const createIncident = async (data: Omit<Incident, 'id' | 'createdAt'>): 
 
     return newIncident;
 };
+
+export const updateIncident = async (id: string, updates: Partial<Incident>): Promise<Incident> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const incidents = initializeIncidents();
+    const index = incidents.findIndex(i => i.id === id);
+
+    if (index === -1) {
+        throw new Error('Incident not found');
+    }
+
+    incidents[index] = { ...incidents[index], ...updates };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(incidents));
+
+    return incidents[index];
+};
+
+export const resolveIncident = async (id: string): Promise<Incident> => {
+    return updateIncident(id, {
+        status: 'resolved',
+        resolvedAt: 'Just now'
+    });
+};
+
+export const closeIncident = async (id: string): Promise<Incident> => {
+    return updateIncident(id, { status: 'closed' });
+};
+
+export const reassignIncident = async (id: string, assignedTo: string): Promise<Incident> => {
+    return updateIncident(id, { assignedTo });
+};
