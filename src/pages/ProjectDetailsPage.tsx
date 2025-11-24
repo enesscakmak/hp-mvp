@@ -19,6 +19,7 @@ import { clsx } from 'clsx';
 import StatCard from '../components/StatCard';
 import { projectService } from '../services/projectService';
 import { Project } from '../components/ProjectCard';
+import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
 
 const ProjectDetailsPage: React.FC = () => {
     const { projectId } = useParams();
@@ -28,6 +29,7 @@ const ProjectDetailsPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -168,7 +170,10 @@ const ProjectDetailsPage: React.FC = () => {
                                     <span>Repo</span>
                                 </a>
                             )}
-                            <button className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-sm text-sm font-medium hover:bg-zinc-200 transition-colors">
+                            <button
+                                onClick={() => setIsDeployModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-sm text-sm font-medium hover:bg-zinc-200 transition-colors"
+                            >
                                 <Rocket className="h-4 w-4" />
                                 <span>Deploy</span>
                             </button>
@@ -360,6 +365,16 @@ const ProjectDetailsPage: React.FC = () => {
                     )}
                 </motion.div>
             </div>
+
+            <TriggerDeploymentModal
+                isOpen={isDeployModalOpen}
+                onClose={() => setIsDeployModalOpen(false)}
+                onSuccess={() => {
+                    // Optionally navigate to deployments page
+                    window.location.href = '/deployments';
+                }}
+                preselectedProject={project?.name}
+            />
         </div>
     );
 };

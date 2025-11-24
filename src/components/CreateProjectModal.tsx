@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2 } from 'lucide-react';
 import { projectService } from '../services/projectService';
+import CustomDropdown from './CustomDropdown';
 import { Project } from './ProjectCard';
 
 interface CreateProjectModalProps {
@@ -86,16 +87,16 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
 
                   <div>
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Framework</label>
-                    <select
+                    <CustomDropdown
                       value={formData.framework}
-                      onChange={(e) => setFormData({ ...formData, framework: e.target.value as any })}
-                      className="w-full bg-zinc-900/50 border border-zinc-800 rounded-sm px-3 py-2 text-white focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 appearance-none"
-                    >
-                      <option value="react">React</option>
-                      <option value="node">Node.js</option>
-                      <option value="python">Python</option>
-                      <option value="go">Go</option>
-                    </select>
+                      onChange={(value) => setFormData({ ...formData, framework: value as any })}
+                      options={[
+                        { value: 'react', label: 'React' },
+                        { value: 'node', label: 'Node.js' },
+                        { value: 'python', label: 'Python' },
+                        { value: 'go', label: 'Go' }
+                      ]}
+                    />
                   </div>
 
                   <div className="pt-4 flex justify-end gap-3">

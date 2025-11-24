@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
 import {
     Rocket,
     Search,
@@ -91,6 +92,8 @@ const DeploymentsPage: React.FC = () => {
     const [filterEnv, setFilterEnv] = useState<'all' | 'production' | 'staging' | 'preview'>('all');
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [isEnvDropdownOpen, setIsEnvDropdownOpen] = useState(false);
+    const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     // Close dropdowns when clicking outside
     React.useEffect(() => {
@@ -148,6 +151,13 @@ const DeploymentsPage: React.FC = () => {
                         <div className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-mono text-zinc-400">
                             <span className="text-emerald-500">●</span> Live System Status: Normal
                         </div>
+                        <button
+                            onClick={() => setIsDeployModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-sm hover:bg-blue-700 transition-colors"
+                        >
+                            <Rocket className="h-4 w-4" />
+                            <span>New Deployment</span>
+                        </button>
                     </div>
                 </div>
 
@@ -326,6 +336,15 @@ const DeploymentsPage: React.FC = () => {
                 </div>
 
             </div>
+
+            <TriggerDeploymentModal
+                isOpen={isDeployModalOpen}
+                onClose={() => setIsDeployModalOpen(false)}
+                onSuccess={() => {
+                    setRefreshKey(prev => prev + 1);
+                    window.location.reload(); // Refresh to show new deployment
+                }}
+            />
         </div>
     );
 };
