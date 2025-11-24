@@ -144,53 +144,57 @@ const IncidentsPage: React.FC = () => {
                 {/* Incidents List */}
                 <div className="space-y-4">
                     {filteredIncidents.map((incident, index) => (
-                        <motion.div
+                        <Link
                             key={incident.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            className="group bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 hover:bg-zinc-900/50 hover:border-zinc-700 transition-all cursor-pointer"
+                            to={`/incidents/${incident.id}`}
                         >
-                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="group bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 hover:bg-zinc-900/50 hover:border-zinc-700 transition-all cursor-pointer"
+                            >
+                                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
 
-                                {/* Left: Status & Info */}
-                                <div className="flex items-start gap-4 flex-1">
-                                    <div className="mt-1 p-2 rounded-full bg-zinc-900 border border-zinc-800">
-                                        {getStatusIcon(incident.status)}
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                            <h3 className="text-white font-medium">{incident.title}</h3>
-                                            <span className="text-zinc-600 text-xs">•</span>
-                                            <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono border",
-                                                getSeverityColor(incident.severity)
-                                            )}>
-                                                {incident.severity}
-                                            </span>
-                                            <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono border",
-                                                getStatusColor(incident.status)
-                                            )}>
-                                                {incident.status}
-                                            </span>
+                                    {/* Left: Status & Info */}
+                                    <div className="flex items-start gap-4 flex-1">
+                                        <div className="mt-1 p-2 rounded-full bg-zinc-900 border border-zinc-800">
+                                            {getStatusIcon(incident.status)}
                                         </div>
-                                        <p className="text-sm text-zinc-400 mb-2">{incident.description}</p>
-                                        <div className="flex items-center gap-4 text-xs text-zinc-500 font-mono">
-                                            <span>Created {incident.createdAt}</span>
-                                            {incident.resolvedAt && <span>• Resolved {incident.resolvedAt}</span>}
-                                            {incident.assignedTo && <span>• Assigned to {incident.assignedTo}</span>}
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                <h3 className="text-white font-medium">{incident.title}</h3>
+                                                <span className="text-zinc-600 text-xs">•</span>
+                                                <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono border",
+                                                    getSeverityColor(incident.severity)
+                                                )}>
+                                                    {incident.severity}
+                                                </span>
+                                                <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono border",
+                                                    getStatusColor(incident.status)
+                                                )}>
+                                                    {incident.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-zinc-400 mb-2">{incident.description}</p>
+                                            <div className="flex items-center gap-4 text-xs text-zinc-500 font-mono">
+                                                <span>Created {incident.createdAt}</span>
+                                                {incident.resolvedAt && <span>• Resolved {incident.resolvedAt}</span>}
+                                                {incident.assignedTo && <span>• Assigned to {incident.assignedTo}</span>}
+                                            </div>
                                         </div>
                                     </div>
+
+                                    {/* Right: Project Link */}
+                                    {incident.projectId && (
+                                        <div className="text-sm text-zinc-500 font-mono">
+                                            Project: {incident.projectId}
+                                        </div>
+                                    )}
+
                                 </div>
-
-                                {/* Right: Project Link */}
-                                {incident.projectId && (
-                                    <div className="text-sm text-zinc-500 font-mono">
-                                        Project: {incident.projectId}
-                                    </div>
-                                )}
-
-                            </div>
-                        </motion.div>
+                            </motion.div>
+                        </Link>
                     ))}
 
                     {filteredIncidents.length === 0 && (
