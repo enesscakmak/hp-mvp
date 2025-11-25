@@ -1,0 +1,6 @@
+@IncidentDashboard_HostAddress = http://localhost:5069
+
+GET {{IncidentDashboard_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
