@@ -1,17 +1,9 @@
-# Build results
-[Bb]in/
-[Oo]bj/
-
-# Database
-*.db
-*.db-shm
-*.db-wal
-
-# User-specific files
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-
-# VS Code
+node_modules/
+dist/
+bin/
+obj/
+.DS_Store
+.env
 .vscode/
+coverage/
+*.log
