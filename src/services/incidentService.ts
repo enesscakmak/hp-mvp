@@ -1,4 +1,4 @@
-// Mock incident service for localStorage-based persistence
+import { api } from './api';
 
 export interface Incident {
     id: string;
@@ -13,121 +13,130 @@ export interface Incident {
     assignedTo?: string;
 }
 
-const STORAGE_KEY = 'hp_incidents';
+// Backend model mapping
+interface BackendIncident {
+    id: number;
+    title: string;
+    description: string;
+    type: number; // 0=Bug, 1=Outage, 2=Maintenance, 3=Other
+    severity: number; // 0=Low, 1=Medium, 2=High, 3=Critical
+    status: number; // 0=Open, 1=InProgress, 2=Resolved, 3=Closed
+    createdAt: string;
+    resolvedAt?: string;
+}
 
-// Initialize with mock data if empty
-const initializeIncidents = (): Incident[] => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-        return JSON.parse(stored);
-    }
+const mapBackendToFrontend = (backend: BackendIncident): Incident => {
+    const severityMap: Record<number, Incident['severity']> = {
+        0: 'low',
+        1: 'medium',
+        2: 'high',
+        3: 'critical'
+    };
 
-    const initial: Incident[] = [
-        {
-            id: 'inc-1',
-            title: 'High Error Rate in Auth Service',
-            description: 'Spike in authentication failures after deployment',
-            severity: 'critical',
-            status: 'resolved',
-            deploymentId: 'dep-1',
-            projectId: 'proj-1',
-            createdAt: '2h ago',
-            resolvedAt: '1h ago',
-            assignedTo: 'enes'
-        },
-        {
-            id: 'inc-2',
-            title: 'Payment Gateway Timeout',
-            description: 'Users experiencing timeouts during checkout',
-            severity: 'high',
-            status: 'investigating',
-            deploymentId: 'dep-3',
-            projectId: 'proj-3',
-            createdAt: '4h ago',
-            assignedTo: 'alex'
-        },
-        {
-            id: 'inc-3',
-            title: 'Slow Dashboard Load Times',
-            description: 'Dashboard taking 5+ seconds to load',
-            severity: 'medium',
-            status: 'open',
-            deploymentId: 'dep-2',
-            projectId: 'proj-2',
-            createdAt: '30m ago',
-            assignedTo: 'antigravity'
-        },
-        {
-            id: 'inc-4',
-            title: 'Database Connection Pool Exhausted',
-            description: 'Connection pool hitting max capacity',
-            severity: 'high',
-            status: 'resolved',
-            deploymentId: 'dep-4',
-            projectId: 'proj-4',
-            createdAt: '1d ago',
-            resolvedAt: '20h ago',
-            assignedTo: 'sarah'
-        }
-    ];
+    const statusMap: Record<number, Incident['status']> = {
+        0: 'open',
+        1: 'investigating',
+        2: 'resolved',
+        3: 'closed'
+    };
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-    return initial;
+    return {
+        id: backend.id.toString(),
+        title: backend.title,
+        description: backend.description,
+        severity: severityMap[backend.severity] || 'low',
+        status: statusMap[backend.status] || 'open',
+        createdAt: new Date(backend.createdAt).toLocaleString(),
+        resolvedAt: backend.resolvedAt ? new Date(backend.resolvedAt).toLocaleString() : undefined,
+    };
 };
 
 export const getIncidents = async (): Promise<Incident[]> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return initializeIncidents();
+    const incidents = await api.get<BackendIncident[]>('/Incidents');
+    return incidents.map(mapBackendToFrontend);
 };
 
 export const getIncidentById = async (id: string): Promise<Incident | null> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const incidents = initializeIncidents();
-    return incidents.find(i => i.id === id) || null;
+    try {
+        const incident = await api.get<BackendIncident>(`/Incidents/${id}`);
+        return mapBackendToFrontend(incident);
+    } catch (error) {
+        return null;
+    }
 };
 
 export const getIncidentsByDeploymentId = async (deploymentId: string): Promise<Incident[]> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const incidents = initializeIncidents();
+    // Note: Backend doesn't have deployment relationship yet
+    // For now, return all incidents
+    const incidents = await getIncidents();
     return incidents.filter(i => i.deploymentId === deploymentId);
 };
 
 export const createIncident = async (data: Omit<Incident, 'id' | 'createdAt'>): Promise<Incident> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const incidents = initializeIncidents();
-    const newIncident: Incident = {
-        ...data,
-        id: `inc-${Date.now()}`,
-        createdAt: 'Just now'
+    const severityMap: Record<Incident['severity'], number> = {
+        'low': 0,
+        'medium': 1,
+        'high': 2,
+        'critical': 3
     };
 
-    incidents.unshift(newIncident);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(incidents));
+    const statusMap: Record<Incident['status'], number> = {
+        'open': 0,
+        'investigating': 1,
+        'resolved': 2,
+        'closed': 3
+    };
 
-    return newIncident;
+    const backendData = {
+        title: data.title,
+        description: data.description,
+        type: 0, // Default to Bug
+        severity: severityMap[data.severity],
+        status: statusMap[data.status],
+        createdAt: new Date().toISOString()
+    };
+
+    const newIncident = await api.post<BackendIncident>('/Incidents', backendData);
+    return mapBackendToFrontend(newIncident);
 };
 
 export const updateIncident = async (id: string, updates: Partial<Incident>): Promise<Incident> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
+    const current = await getIncidentById(id);
+    if (!current) throw new Error('Incident not found');
 
-    const incidents = initializeIncidents();
-    const index = incidents.findIndex(i => i.id === id);
+    const severityMap: Record<Incident['severity'], number> = {
+        'low': 0,
+        'medium': 1,
+        'high': 2,
+        'critical': 3
+    };
 
-    if (index === -1) {
-        throw new Error('Incident not found');
-    }
+    const statusMap: Record<Incident['status'], number> = {
+        'open': 0,
+        'investigating': 1,
+        'resolved': 2,
+        'closed': 3
+    };
 
-    incidents[index] = { ...incidents[index], ...updates };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(incidents));
+    const backendData = {
+        id: parseInt(id),
+        title: updates.title || current.title,
+        description: updates.description || current.description,
+        type: 0,
+        severity: updates.severity ? severityMap[updates.severity] : severityMap[current.severity],
+        status: updates.status ? statusMap[updates.status] : statusMap[current.status],
+        createdAt: current.createdAt,
+        resolvedAt: updates.resolvedAt || current.resolvedAt
+    };
 
-    return incidents[index];
+    const updatedIncident = await api.put<BackendIncident>(`/Incidents/${id}`, backendData);
+    return mapBackendToFrontend(updatedIncident);
 };
 
 export const resolveIncident = async (id: string): Promise<Incident> => {
     return updateIncident(id, {
         status: 'resolved',
-        resolvedAt: 'Just now'
+        resolvedAt: new Date().toISOString()
     });
 };
 

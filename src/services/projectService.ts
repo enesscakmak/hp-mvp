@@ -1,101 +1,55 @@
-import { Project } from '../components/ProjectCard';
+import { api } from './api';
 
-const STORAGE_KEY = 'hp_mvp_projects';
-
-const MOCK_PROJECTS: Project[] = [
-  {
-    id: '1',
-    name: 'auth-service',
-    description: 'Centralized authentication and authorization service handling JWT tokens and user sessions.',
-    status: 'healthy',
-    lastDeploy: '2h ago',
-    framework: 'go',
-  },
-  {
-    id: '2',
-    name: 'payment-gateway',
-    description: 'Stripe integration wrapper for processing recurring subscriptions and one-time payments.',
-    status: 'warning',
-    lastDeploy: '5m ago',
-    framework: 'node',
-  },
-  {
-    id: '3',
-    name: 'frontend-dashboard',
-    description: 'Main customer-facing dashboard built with React and Vite.',
-    status: 'healthy',
-    lastDeploy: '1d ago',
-    framework: 'react',
-  },
-  {
-    id: '4',
-    name: 'data-pipeline',
-    description: 'ETL pipeline for processing user analytics and generating daily reports.',
-    status: 'down',
-    lastDeploy: '3d ago',
-    framework: 'python',
-  },
-  {
-    id: '5',
-    name: 'notification-worker',
-    description: 'Background worker for sending emails and push notifications via SQS.',
-    status: 'healthy',
-    lastDeploy: '12h ago',
-    framework: 'go',
-  },
-];
-
-// Initialize storage with mock data if empty
-if (!localStorage.getItem(STORAGE_KEY)) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_PROJECTS));
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  status: 'healthy' | 'warning' | 'down';
+  lastDeploy: string;
+  framework: 'react' | 'node' | 'python' | 'go';
 }
 
 export const projectService = {
   getProjects: async (): Promise<Project[]> => {
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    const projects = await api.get<Project[]>('/Projects');
+    return projects.map(p => ({ ...p, id: p.id.toString() }));
   },
 
   getProjectById: async (id: string): Promise<Project | undefined> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const projects = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    return projects.find((p: Project) => p.id === id);
+    try {
+      const project = await api.get<Project>(`/Projects/${id}`);
+      return { ...project, id: project.id.toString() };
+    } catch (error) {
+      return undefined;
+    }
   },
 
   createProject: async (project: Omit<Project, 'id' | 'status' | 'lastDeploy'>): Promise<Project> => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const projects = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-
-    const newProject: Project = {
-      ...project,
-      id: Math.random().toString(36).substr(2, 9),
+    const backendData = {
+      name: project.name,
+      description: project.description,
+      framework: project.framework,
       status: 'healthy',
-      lastDeploy: 'Just now',
+      lastDeploy: 'Just now'
     };
 
-    projects.push(newProject);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-    return newProject;
+    const newProject = await api.post<any>('/Projects', backendData);
+    return {
+      id: newProject.id.toString(),
+      name: newProject.name,
+      description: newProject.description,
+      status: newProject.status as Project['status'],
+      lastDeploy: newProject.lastDeploy,
+      framework: newProject.framework as Project['framework']
+    };
   },
 
   updateProject: async (id: string, updates: Partial<Project>): Promise<Project> => {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    const projects = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const index = projects.findIndex((p: Project) => p.id === id);
-
-    if (index === -1) throw new Error('Project not found');
-
-    const updatedProject = { ...projects[index], ...updates };
-    projects[index] = updatedProject;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-    return updatedProject;
+    const updatedProject = await api.put<Project>(`/Projects/${id}`, updates);
+    return { ...updatedProject, id: updatedProject.id.toString() };
   },
 
   deleteProject: async (id: string): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    const projects = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const filteredProjects = projects.filter((p: Project) => p.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredProjects));
+    await api.delete(`/Projects/${id}`);
   }
 };

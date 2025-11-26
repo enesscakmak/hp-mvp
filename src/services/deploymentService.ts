@@ -1,4 +1,4 @@
-// Mock deployment service for localStorage-based persistence
+import { api } from './api';
 
 export interface Deployment {
     id: string;
@@ -13,92 +13,50 @@ export interface Deployment {
     branch: string;
 }
 
-const STORAGE_KEY = 'hp_deployments';
+// Backend model mapping
+interface BackendDeployment {
+    id: number;
+    projectName: string;
+    version: string;
+    environment: string;
+    status: number; // 0=Pending, 1=Success, 2=Failed
+    deployedAt: string;
+    notes: string;
+}
 
-// Initialize with mock data if empty
-const initializeDeployments = (): Deployment[] => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-        return JSON.parse(stored);
-    }
+const mapBackendToFrontend = (backend: BackendDeployment): Deployment => {
+    const statusMap: Record<number, Deployment['status']> = {
+        0: 'queued',
+        1: 'success',
+        2: 'failed'
+    };
 
-    const initial: Deployment[] = [
-        {
-            id: 'dep-1',
-            project: 'auth-service',
-            environment: 'production',
-            status: 'success',
-            commitHash: 'a1b2c3d',
-            commitMessage: 'feat: implement OIDC provider',
-            author: 'enes',
-            timestamp: '2h ago',
-            duration: '45s',
-            branch: 'main'
-        },
-        {
-            id: 'dep-2',
-            project: 'frontend-dashboard',
-            environment: 'preview',
-            status: 'building',
-            commitHash: 'e5f6g7h',
-            commitMessage: 'fix: modal positioning issue',
-            author: 'antigravity',
-            timestamp: 'Just now',
-            duration: 'Running...',
-            branch: 'fix/modal-position'
-        },
-        {
-            id: 'dep-3',
-            project: 'payment-gateway',
-            environment: 'production',
-            status: 'failed',
-            commitHash: 'i8j9k0l',
-            commitMessage: 'chore: update stripe api version',
-            author: 'alex',
-            timestamp: '5h ago',
-            duration: '1m 20s',
-            branch: 'main'
-        },
-        {
-            id: 'dep-4',
-            project: 'data-pipeline',
-            environment: 'staging',
-            status: 'success',
-            commitHash: 'm1n2o3p',
-            commitMessage: 'perf: optimize etl batch processing',
-            author: 'sarah',
-            timestamp: '1d ago',
-            duration: '5m 12s',
-            branch: 'main'
-        },
-        {
-            id: 'dep-5',
-            project: 'auth-service',
-            environment: 'staging',
-            status: 'success',
-            commitHash: 'q4r5s6t',
-            commitMessage: 'test: add integration tests for auth flow',
-            author: 'enes',
-            timestamp: '1d ago',
-            duration: '3m 45s',
-            branch: 'main'
-        }
-    ];
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-    return initial;
+    return {
+        id: backend.id.toString(),
+        project: backend.projectName,
+        environment: backend.environment.toLowerCase() as Deployment['environment'],
+        status: statusMap[backend.status] || 'queued',
+        commitHash: backend.version.substring(0, 7),
+        commitMessage: backend.notes || `Deploy ${backend.version}`,
+        author: 'system',
+        timestamp: new Date(backend.deployedAt).toLocaleString(),
+        duration: backend.status === 1 ? '45s' : backend.status === 2 ? 'Failed' : 'Running...',
+        branch: 'main'
+    };
 };
 
 export const getDeployments = async (): Promise<Deployment[]> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return initializeDeployments();
+    const deployments = await api.get<BackendDeployment[]>('/Deployments');
+    return deployments.map(mapBackendToFrontend);
 };
 
 export const getDeploymentById = async (id: string): Promise<Deployment | null> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const deployments = initializeDeployments();
-    return deployments.find(d => d.id === id) || null;
+    try {
+        const deployment = await api.get<BackendDeployment>(`/Deployments/${id}`);
+        return mapBackendToFrontend(deployment);
+    } catch (error) {
+        return null;
+    }
 };
 
 export const createDeployment = async (data: {
@@ -106,24 +64,15 @@ export const createDeployment = async (data: {
     branch: string;
     environment: 'production' | 'staging' | 'preview';
 }): Promise<Deployment> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const deployments = initializeDeployments();
-    const newDeployment: Deployment = {
-        id: `dep-${Date.now()}`,
-        project: data.project,
-        environment: data.environment,
-        status: 'building',
-        commitHash: Math.random().toString(36).substring(2, 9),
-        commitMessage: `Deploy ${data.branch} to ${data.environment}`,
-        author: 'current-user',
-        timestamp: 'Just now',
-        duration: 'Running...',
-        branch: data.branch
+    const backendData = {
+        projectName: data.project,
+        version: `v1.0.0-${data.branch}`,
+        environment: data.environment.charAt(0).toUpperCase() + data.environment.slice(1),
+        status: 0, // Pending
+        deployedAt: new Date().toISOString(),
+        notes: `Deploy ${data.branch} to ${data.environment}`
     };
 
-    deployments.unshift(newDeployment);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(deployments));
-
-    return newDeployment;
+    const newDeployment = await api.post<BackendDeployment>('/Deployments', backendData);
+    return mapBackendToFrontend(newDeployment);
 };

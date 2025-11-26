@@ -44,6 +44,32 @@ namespace IncidentDashboard.Data
 
             context.Incidents.AddRange(incidents);
             context.SaveChanges();
+
+            // Seed checklist templates
+            var checklistTemplates = new ChecklistTemplate[]
+            {
+                new ChecklistTemplate
+                {
+                    Title = "Production Deployment",
+                    Description = "Standard checklist for production deployments",
+                    Type = "deployment",
+                    StepsJson = "[{\"id\":\"s1\",\"text\":\"Verify all tests passed\",\"isOptional\":false},{\"id\":\"s2\",\"text\":\"Check database migrations\",\"isOptional\":false},{\"id\":\"s3\",\"text\":\"Notify team in Slack\",\"isOptional\":true},{\"id\":\"s4\",\"text\":\"Monitor error rates\",\"isOptional\":false}]",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new ChecklistTemplate
+                {
+                    Title = "Sev1 Incident Response",
+                    Description = "Critical incident response procedure",
+                    Type = "incident",
+                    StepsJson = "[{\"id\":\"s1\",\"text\":\"Acknowledge incident\",\"isOptional\":false},{\"id\":\"s2\",\"text\":\"Create war room\",\"isOptional\":false},{\"id\":\"s3\",\"text\":\"Assess impact\",\"isOptional\":false},{\"id\":\"s4\",\"text\":\"Update status page\",\"isOptional\":false}]",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                }
+            };
+
+            context.ChecklistTemplates.AddRange(checklistTemplates);
+            context.SaveChanges();
         }
     }
 }
