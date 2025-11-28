@@ -23,6 +23,9 @@ interface BackendIncident {
     status: number; // 0=Open, 1=InProgress, 2=Resolved, 3=Closed
     createdAt: string;
     resolvedAt?: string;
+    deploymentId?: number;
+    projectId?: number;
+    assignedTo?: string;
 }
 
 const mapBackendToFrontend = (backend: BackendIncident): Incident => {
@@ -48,6 +51,9 @@ const mapBackendToFrontend = (backend: BackendIncident): Incident => {
         status: statusMap[backend.status] || 'open',
         createdAt: new Date(backend.createdAt).toLocaleString(),
         resolvedAt: backend.resolvedAt ? new Date(backend.resolvedAt).toLocaleString() : undefined,
+        deploymentId: backend.deploymentId?.toString(),
+        projectId: backend.projectId?.toString(),
+        assignedTo: backend.assignedTo
     };
 };
 

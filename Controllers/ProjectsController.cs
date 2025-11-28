@@ -49,7 +49,7 @@ namespace IncidentDashboard.Controllers
 
         // PUT: api/Projects/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutProject(int id, Project project)
+        public async Task<ActionResult<Project>> PutProject(int id, Project project)
         {
             if (id != project.Id)
             {
@@ -74,7 +74,7 @@ namespace IncidentDashboard.Controllers
                 }
             }
 
-            return NoContent();
+            return project;
         }
 
         // DELETE: api/Projects/5

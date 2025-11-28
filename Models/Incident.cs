@@ -44,5 +44,11 @@ namespace IncidentDashboard.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? ResolvedAt { get; set; }
+
+        public int? DeploymentId { get; set; }
+
+        public int? ProjectId { get; set; }
+
+        public string? AssignedTo { get; set; }
     }
 }

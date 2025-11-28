@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
+import { getDeployments, Deployment } from '../services/deploymentService';
 import {
     Rocket,
     Search,
@@ -17,83 +18,9 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
-interface Deployment {
-    id: string;
-    project: string;
-    environment: 'production' | 'staging' | 'preview';
-    status: 'success' | 'failed' | 'building' | 'queued';
-    commitHash: string;
-    commitMessage: string;
-    author: string;
-    timestamp: string;
-    duration: string;
-    incidentCount?: number;
-}
-
-const MOCK_DEPLOYMENTS: Deployment[] = [
-    {
-        id: 'dep-1',
-        project: 'auth-service',
-        environment: 'production',
-        status: 'success',
-        commitHash: 'a1b2c3d',
-        commitMessage: 'feat: implement OIDC provider',
-        author: 'enes',
-        timestamp: '2h ago',
-        duration: '45s',
-        incidentCount: 1
-    },
-    {
-        id: 'dep-2',
-        project: 'frontend-dashboard',
-        environment: 'preview',
-        status: 'building',
-        commitHash: 'e5f6g7h',
-        commitMessage: 'fix: modal positioning issue',
-        author: 'antigravity',
-        timestamp: 'Just now',
-        duration: 'Running...',
-        incidentCount: 1
-    },
-    {
-        id: 'dep-3',
-        project: 'payment-gateway',
-        environment: 'production',
-        status: 'failed',
-        commitHash: 'i8j9k0l',
-        commitMessage: 'chore: update stripe api version',
-        author: 'alex',
-        timestamp: '5h ago',
-        duration: '1m 20s',
-        incidentCount: 1
-    },
-    {
-        id: 'dep-4',
-        project: 'data-pipeline',
-        environment: 'staging',
-        status: 'success',
-        commitHash: 'm1n2o3p',
-        commitMessage: 'perf: optimize etl batch processing',
-        author: 'sarah',
-        timestamp: '1d ago',
-        duration: '5m 12s',
-        incidentCount: 1
-    },
-    {
-        id: 'dep-5',
-        project: 'auth-service',
-        environment: 'staging',
-        status: 'success',
-        commitHash: 'q4r5s6t',
-        commitMessage: 'test: add integration tests for auth flow',
-        author: 'enes',
-        timestamp: '1d ago',
-        duration: '3m 45s',
-        incidentCount: 0
-    }
-];
-
 const DeploymentsPage: React.FC = () => {
+    const [deployments, setDeployments] = useState<Deployment[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'success' | 'failed' | 'building'>('all');
     const [filterEnv, setFilterEnv] = useState<'all' | 'production' | 'staging' | 'preview'>('all');
@@ -101,6 +28,22 @@ const DeploymentsPage: React.FC = () => {
     const [isEnvDropdownOpen, setIsEnvDropdownOpen] = useState(false);
     const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+
+    useEffect(() => {
+        loadDeployments();
+    }, [refreshKey]);
+
+    const loadDeployments = async () => {
+        setIsLoading(true);
+        try {
+            const data = await getDeployments();
+            setDeployments(data);
+        } catch (error) {
+            console.error('Failed to load deployments:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Close dropdowns when clicking outside
     React.useEffect(() => {
@@ -115,7 +58,7 @@ const DeploymentsPage: React.FC = () => {
         }
     }, [isStatusDropdownOpen, isEnvDropdownOpen]);
 
-    const filteredDeployments = MOCK_DEPLOYMENTS.filter(dep => {
+    const filteredDeployments = deployments.filter(dep => {
         const matchesSearch = dep.project.toLowerCase().includes(searchQuery.toLowerCase()) ||
             dep.commitMessage.toLowerCase().includes(searchQuery.toLowerCase()) ||
             dep.author.toLowerCase().includes(searchQuery.toLowerCase());
@@ -130,15 +73,6 @@ const DeploymentsPage: React.FC = () => {
             case 'failed': return <XCircle className="h-4 w-4 text-rose-500" />;
             case 'building': return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
             case 'queued': return <Clock className="h-4 w-4 text-zinc-500" />;
-        }
-    };
-
-    const getStatusColor = (status: Deployment['status']) => {
-        switch (status) {
-            case 'success': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-            case 'failed': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-            case 'building': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-            case 'queued': return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
         }
     };
 
@@ -272,82 +206,81 @@ const DeploymentsPage: React.FC = () => {
 
                 {/* Deployments List */}
                 <div className="space-y-4">
-                    {filteredDeployments.map((dep, index) => (
-                        <Link key={dep.id} to={`/deployments/${dep.id}`}>
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                                className="group bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 hover:bg-zinc-900/50 hover:border-zinc-700 transition-all cursor-pointer"
-                            >
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-
-                                    {/* Left: Status & Project Info */}
-                                    <div className="flex items-start gap-4">
-                                        <div className={clsx("mt-1 p-2 rounded-full bg-zinc-900 border border-zinc-800",
-                                            dep.status === 'building' && "animate-pulse"
-                                        )}>
-                                            {getStatusIcon(dep.status)}
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <h3 className="text-white font-medium">{dep.project}</h3>
-                                                <span className="text-zinc-600 text-xs">•</span>
-                                                <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
-                                                    dep.environment === 'production' ? "bg-purple-500/10 text-purple-400" :
-                                                        dep.environment === 'staging' ? "bg-amber-500/10 text-amber-400" :
-                                                            "bg-blue-500/10 text-blue-400"
-                                                )}>
-                                                    {dep.environment}
-                                                </span>
-                                                {dep.incidentCount !== undefined && dep.incidentCount > 0 && (
-                                                    <>
-                                                        <span className="text-zinc-600 text-xs">•</span>
-                                                        <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-sm bg-rose-500/10 text-rose-400 font-mono">
-                                                            <AlertTriangle className="h-3 w-3" />
-                                                            {dep.incidentCount}
-                                                        </span>
-                                                    </>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-2 text-sm text-zinc-400">
-                                                <GitCommit className="h-3 w-3" />
-                                                <span className="font-mono text-zinc-500">{dep.commitHash}</span>
-                                                <span className="text-zinc-300">{dep.commitMessage}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Right: Meta Info */}
-                                    <div className="flex items-center gap-6 text-sm text-zinc-500 font-mono">
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-300 uppercase">
-                                                {dep.author.substring(0, 2)}
-                                            </div>
-                                            <span>{dep.author}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Clock className="h-3 w-3" />
-                                            <span>{dep.timestamp}</span>
-                                        </div>
-                                        <div className="w-20 text-right">
-                                            {dep.duration}
-                                        </div>
-                                        <button className="p-2 hover:bg-zinc-800 rounded-sm text-zinc-500 hover:text-white transition-colors">
-                                            <ExternalLink className="h-4 w-4" />
-                                        </button>
-                                    </div>
-
-                                </div>
-                            </motion.div>
-                        </Link>
-                    ))}
-
-                    {filteredDeployments.length === 0 && (
-                        <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
-                            <Rocket className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                            <p className="text-zinc-500 font-mono">NO_DEPLOYMENTS_FOUND</p>
+                    {isLoading ? (
+                        <div className="flex justify-center py-20">
+                            <Loader2 className="h-8 w-8 text-zinc-500 animate-spin" />
                         </div>
+                    ) : (
+                        <>
+                            {filteredDeployments.map((dep, index) => (
+                                <Link key={dep.id} to={`/deployments/${dep.id}`}>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className="group bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 hover:bg-zinc-900/50 hover:border-zinc-700 transition-all cursor-pointer"
+                                    >
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+                                            {/* Left: Status & Project Info */}
+                                            <div className="flex items-start gap-4">
+                                                <div className={clsx("mt-1 p-2 rounded-full bg-zinc-900 border border-zinc-800",
+                                                    dep.status === 'building' && "animate-pulse"
+                                                )}>
+                                                    {getStatusIcon(dep.status)}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h3 className="text-white font-medium">{dep.project}</h3>
+                                                        <span className="text-zinc-600 text-xs">•</span>
+                                                        <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
+                                                            dep.environment === 'production' ? "bg-purple-500/10 text-purple-400" :
+                                                                dep.environment === 'staging' ? "bg-amber-500/10 text-amber-400" :
+                                                                    "bg-blue-500/10 text-blue-400"
+                                                        )}>
+                                                            {dep.environment}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-sm text-zinc-400">
+                                                        <GitCommit className="h-3 w-3" />
+                                                        <span className="font-mono text-zinc-500">{dep.commitHash}</span>
+                                                        <span className="text-zinc-300">{dep.commitMessage}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Right: Meta Info */}
+                                            <div className="flex items-center gap-6 text-sm text-zinc-500 font-mono">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-300 uppercase">
+                                                        {dep.author.substring(0, 2)}
+                                                    </div>
+                                                    <span>{dep.author}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <Clock className="h-3 w-3" />
+                                                    <span>{dep.timestamp}</span>
+                                                </div>
+                                                <div className="w-20 text-right">
+                                                    {dep.duration}
+                                                </div>
+                                                <button className="p-2 hover:bg-zinc-800 rounded-sm text-zinc-500 hover:text-white transition-colors">
+                                                    <ExternalLink className="h-4 w-4" />
+                                                </button>
+                                            </div>
+
+                                        </div>
+                                    </motion.div>
+                                </Link>
+                            ))}
+
+                            {filteredDeployments.length === 0 && (
+                                <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
+                                    <Rocket className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                                    <p className="text-zinc-500 font-mono">NO_DEPLOYMENTS_FOUND</p>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 
@@ -358,7 +291,6 @@ const DeploymentsPage: React.FC = () => {
                 onClose={() => setIsDeployModalOpen(false)}
                 onSuccess={() => {
                     setRefreshKey(prev => prev + 1);
-                    window.location.reload(); // Refresh to show new deployment
                 }}
             />
         </div>

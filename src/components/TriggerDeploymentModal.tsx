@@ -26,6 +26,13 @@ const TriggerDeploymentModal: React.FC<TriggerDeploymentModalProps> = ({
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // Update project when preselectedProject changes
+    React.useEffect(() => {
+        if (preselectedProject) {
+            setFormData(prev => ({ ...prev, project: preselectedProject }));
+        }
+    }, [preselectedProject]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -97,7 +104,11 @@ const TriggerDeploymentModal: React.FC<TriggerDeploymentModalProps> = ({
                                                 { value: 'auth-service', label: 'auth-service' },
                                                 { value: 'frontend-dashboard', label: 'frontend-dashboard' },
                                                 { value: 'payment-gateway', label: 'payment-gateway' },
-                                                { value: 'data-pipeline', label: 'data-pipeline' }
+                                                { value: 'data-pipeline', label: 'data-pipeline' },
+                                                // Add the current project if it's not in the list
+                                                ...(preselectedProject && !['auth-service', 'frontend-dashboard', 'payment-gateway', 'data-pipeline'].includes(preselectedProject)
+                                                    ? [{ value: preselectedProject, label: preselectedProject }]
+                                                    : [])
                                             ]}
                                             disabled={!!preselectedProject}
                                         />

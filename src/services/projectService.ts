@@ -40,13 +40,31 @@ export const projectService = {
       description: newProject.description,
       status: newProject.status as Project['status'],
       lastDeploy: newProject.lastDeploy,
-      framework: newProject.framework as Project['framework']
+      framework: newProject.framework as Project['framework'],
+      repoUrl: newProject.repoUrl
     };
   },
 
   updateProject: async (id: string, updates: Partial<Project>): Promise<Project> => {
-    const updatedProject = await api.put<Project>(`/Projects/${id}`, updates);
-    return { ...updatedProject, id: updatedProject.id.toString() };
+    // First get the current project to ensure we have all fields
+    const currentProject = await projectService.getProjectById(id);
+    if (!currentProject) {
+      throw new Error('Project not found');
+    }
+
+    // Merge updates with current project
+    const updatedData = {
+      id: parseInt(id),
+      name: updates.name ?? currentProject.name,
+      description: updates.description ?? currentProject.description,
+      status: currentProject.status,
+      lastDeploy: currentProject.lastDeploy,
+      framework: currentProject.framework,
+      repoUrl: updates.repoUrl ?? currentProject.repoUrl
+    };
+
+    const result = await api.put<Project>(`/Projects/${id}`, updatedData);
+    return { ...result, id: result.id.toString() };
   },
 
   deleteProject: async (id: string): Promise<void> => {

@@ -1,3 +1,5 @@
+import { api } from './api';
+
 export interface ChecklistStep {
     id: string;
     text: string;
@@ -14,103 +16,77 @@ export interface ChecklistTemplate {
     updatedAt: string;
 }
 
-const STORAGE_KEY = 'hp_checklist_templates';
+// Backend model mapping
+interface BackendChecklistTemplate {
+    id: number;
+    title: string;
+    description: string;
+    type: string;
+    stepsJson: string;
+    createdAt: string;
+    updatedAt: string;
+}
 
-const initializeTemplates = (): ChecklistTemplate[] => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-        return JSON.parse(stored);
-    }
-
-    const initialTemplates: ChecklistTemplate[] = [
-        {
-            id: 'tmpl-1',
-            title: 'Production Deployment',
-            description: 'Standard checklist for production deployments',
-            type: 'deployment',
-            steps: [
-                { id: 's1', text: 'Verify all tests passed', isOptional: false },
-                { id: 's2', text: 'Check database migrations', isOptional: false },
-                { id: 's3', text: 'Notify team in Slack', isOptional: true },
-                { id: 's4', text: 'Monitor error rates', isOptional: false }
-            ],
-            createdAt: '2023-11-01T10:00:00Z',
-            updatedAt: '2023-11-01T10:00:00Z'
-        },
-        {
-            id: 'tmpl-2',
-            title: 'Sev1 Incident Response',
-            description: 'Critical incident response procedure',
-            type: 'incident',
-            steps: [
-                { id: 's1', text: 'Acknowledge incident', isOptional: false },
-                { id: 's2', text: 'Create war room', isOptional: false },
-                { id: 's3', text: 'Assess impact', isOptional: false },
-                { id: 's4', text: 'Update status page', isOptional: false }
-            ],
-            createdAt: '2023-11-05T14:30:00Z',
-            updatedAt: '2023-11-05T14:30:00Z'
-        }
-    ];
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialTemplates));
-    return initialTemplates;
+const mapBackendTemplateToFrontend = (backend: BackendChecklistTemplate): ChecklistTemplate => {
+    return {
+        id: backend.id.toString(),
+        title: backend.title,
+        description: backend.description,
+        type: backend.type as 'deployment' | 'incident',
+        steps: JSON.parse(backend.stepsJson),
+        createdAt: backend.createdAt,
+        updatedAt: backend.updatedAt
+    };
 };
 
 export const getChecklistTemplates = async (): Promise<ChecklistTemplate[]> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return initializeTemplates();
+    const templates = await api.get<BackendChecklistTemplate[]>('/ChecklistTemplates');
+    return templates.map(mapBackendTemplateToFrontend);
 };
 
 export const getChecklistTemplateById = async (id: string): Promise<ChecklistTemplate | undefined> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const templates = initializeTemplates();
-    return templates.find(t => t.id === id);
+    try {
+        const template = await api.get<BackendChecklistTemplate>(`/ChecklistTemplates/${id}`);
+        return mapBackendTemplateToFrontend(template);
+    } catch (error) {
+        return undefined;
+    }
 };
 
 export const createChecklistTemplate = async (data: Omit<ChecklistTemplate, 'id' | 'createdAt' | 'updatedAt'>): Promise<ChecklistTemplate> => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-
-    const templates = initializeTemplates();
-    const newTemplate: ChecklistTemplate = {
-        ...data,
-        id: `tmpl-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+    const backendData = {
+        title: data.title,
+        description: data.description,
+        type: data.type,
+        stepsJson: JSON.stringify(data.steps)
     };
 
-    templates.unshift(newTemplate);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
-
-    return newTemplate;
+    const newTemplate = await api.post<BackendChecklistTemplate>('/ChecklistTemplates', backendData);
+    return mapBackendTemplateToFrontend(newTemplate);
 };
 
 export const updateChecklistTemplate = async (id: string, updates: Partial<ChecklistTemplate>): Promise<ChecklistTemplate> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
+    const current = await getChecklistTemplateById(id);
+    if (!current) throw new Error('Template not found');
 
-    const templates = initializeTemplates();
-    const index = templates.findIndex(t => t.id === id);
-
-    if (index === -1) {
-        throw new Error('Template not found');
-    }
-
-    templates[index] = {
-        ...templates[index],
-        ...updates,
+    const backendData = {
+        id: parseInt(id),
+        title: updates.title || current.title,
+        description: updates.description || current.description,
+        type: updates.type || current.type,
+        stepsJson: updates.steps ? JSON.stringify(updates.steps) : JSON.stringify(current.steps),
+        createdAt: current.createdAt,
         updatedAt: new Date().toISOString()
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
 
-    return templates[index];
+    const updatedTemplate = await api.put<BackendChecklistTemplate>(`/ChecklistTemplates/${id}`, backendData);
+    // PUT returns 204 No Content usually, so we might need to fetch it again or return optimistic update
+    // For now, let's assume we return the updated object or fetch it
+    return { ...current, ...updates, updatedAt: new Date().toISOString() };
 };
 
 export const deleteChecklistTemplate = async (id: string): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const templates = initializeTemplates();
-    const filtered = templates.filter(t => t.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    await api.delete(`/ChecklistTemplates/${id}`);
 };
 
 // Checklist Runs
@@ -138,101 +114,114 @@ export interface ChecklistRun {
     targetType?: 'deployment' | 'incident';
 }
 
-const RUNS_STORAGE_KEY = 'hp_checklist_runs';
+interface BackendChecklistRun {
+    id: number;
+    templateId: number;
+    title: string;
+    status: string;
+    stepsJson: string;
+    progress: number;
+    startedAt: string;
+    completedAt?: string;
+    startedBy: string;
+    targetId?: number;
+    targetType?: string;
+}
 
-const initializeRuns = (): ChecklistRun[] => {
-    const stored = localStorage.getItem(RUNS_STORAGE_KEY);
-    if (stored) {
-        return JSON.parse(stored);
-    }
-    return [];
+const mapBackendRunToFrontend = (backend: BackendChecklistRun): ChecklistRun => {
+    return {
+        id: backend.id.toString(),
+        templateId: backend.templateId.toString(),
+        title: backend.title,
+        status: backend.status as 'active' | 'completed',
+        steps: JSON.parse(backend.stepsJson),
+        progress: backend.progress,
+        startedAt: backend.startedAt,
+        completedAt: backend.completedAt,
+        startedBy: backend.startedBy,
+        targetId: backend.targetId?.toString(),
+        targetType: backend.targetType as 'deployment' | 'incident' | undefined
+    };
 };
 
 export const startChecklistRun = async (templateId: string, targetId?: string, targetType?: 'deployment' | 'incident'): Promise<ChecklistRun> => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-
     const template = await getChecklistTemplateById(templateId);
     if (!template) throw new Error('Template not found');
 
-    const runs = initializeRuns();
-    const newRun: ChecklistRun = {
-        id: `run-${Date.now()}`,
-        templateId: template.id,
+    const steps = template.steps.map(s => ({
+        ...s,
+        isCompleted: false
+    }));
+
+    const backendData = {
+        templateId: parseInt(templateId),
         title: template.title,
         status: 'active',
-        steps: template.steps.map(s => ({
-            ...s,
-            isCompleted: false
-        })),
+        stepsJson: JSON.stringify(steps),
         progress: 0,
-        startedAt: new Date().toISOString(),
         startedBy: 'enes', // Mock user
-        targetId,
-        targetType
+        targetId: targetId ? parseInt(targetId) : null,
+        targetType: targetType
     };
 
-    runs.unshift(newRun);
-    localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
-
-    return newRun;
+    const newRun = await api.post<BackendChecklistRun>('/ChecklistRuns', backendData);
+    return mapBackendRunToFrontend(newRun);
 };
 
 export const getChecklistRunsByTarget = async (targetId: string): Promise<ChecklistRun[]> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const runs = initializeRuns();
-    return runs.filter(r => r.targetId === targetId);
+    const runs = await api.get<BackendChecklistRun[]>(`/ChecklistRuns/by-target/${targetId}`);
+    return runs.map(mapBackendRunToFrontend);
 };
 
 export const getChecklistRunById = async (id: string): Promise<ChecklistRun | undefined> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const runs = initializeRuns();
-    return runs.find(r => r.id === id);
+    try {
+        const run = await api.get<BackendChecklistRun>(`/ChecklistRuns/${id}`);
+        return mapBackendRunToFrontend(run);
+    } catch (error) {
+        return undefined;
+    }
 };
 
 export const toggleStepCompletion = async (runId: string, stepId: string, isCompleted: boolean): Promise<ChecklistRun> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
+    const current = await getChecklistRunById(runId);
+    if (!current) throw new Error('Run not found');
 
-    const runs = initializeRuns();
-    const index = runs.findIndex(r => r.id === runId);
+    const updatedSteps = current.steps.map(s => {
+        if (s.id === stepId) {
+            return {
+                ...s,
+                isCompleted,
+                completedAt: isCompleted ? new Date().toISOString() : undefined,
+                completedBy: isCompleted ? 'enes' : undefined
+            };
+        }
+        return s;
+    });
 
-    if (index === -1) throw new Error('Run not found');
+    const totalSteps = updatedSteps.length;
+    const completedSteps = updatedSteps.filter(s => s.isCompleted).length;
+    const progress = Math.round((completedSteps / totalSteps) * 100);
 
-    const run = runs[index];
-    const stepIndex = run.steps.findIndex(s => s.id === stepId);
-
-    if (stepIndex === -1) throw new Error('Step not found');
-
-    run.steps[stepIndex] = {
-        ...run.steps[stepIndex],
-        isCompleted,
-        completedAt: isCompleted ? new Date().toISOString() : undefined,
-        completedBy: isCompleted ? 'enes' : undefined
+    const backendData = {
+        id: parseInt(runId),
+        templateId: parseInt(current.templateId),
+        title: current.title,
+        status: current.status,
+        stepsJson: JSON.stringify(updatedSteps),
+        progress: progress,
+        startedAt: current.startedAt,
+        startedBy: current.startedBy,
+        targetId: current.targetId ? parseInt(current.targetId) : null,
+        targetType: current.targetType
     };
 
-    // Calculate progress
-    const totalSteps = run.steps.length;
-    const completedSteps = run.steps.filter(s => s.isCompleted).length;
-    run.progress = Math.round((completedSteps / totalSteps) * 100);
-
-    localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
-    return run;
+    await api.put(`/ChecklistRuns/${runId}`, backendData);
+    return { ...current, steps: updatedSteps, progress };
 };
 
 export const completeChecklistRun = async (runId: string): Promise<ChecklistRun> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const runs = initializeRuns();
-    const index = runs.findIndex(r => r.id === runId);
-
-    if (index === -1) throw new Error('Run not found');
-
-    runs[index] = {
-        ...runs[index],
-        status: 'completed',
-        completedAt: new Date().toISOString(),
-        progress: 100
-    };
-
-    localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
-    return runs[index];
+    await api.put(`/ChecklistRuns/${runId}/complete`, {});
+    const updated = await getChecklistRunById(runId);
+    if (!updated) throw new Error('Failed to fetch updated run');
+    return updated;
 };

@@ -11,6 +11,8 @@ export interface Deployment {
     timestamp: string;
     duration: string;
     branch: string;
+    logs?: any[];
+    timeline?: any[];
 }
 
 // Backend model mapping
@@ -22,6 +24,12 @@ interface BackendDeployment {
     status: number; // 0=Pending, 1=Success, 2=Failed
     deployedAt: string;
     notes: string;
+    commitHash: string;
+    author: string;
+    branch: string;
+    duration: string;
+    logsJson: string;
+    timelineJson: string;
 }
 
 const mapBackendToFrontend = (backend: BackendDeployment): Deployment => {
@@ -36,12 +44,14 @@ const mapBackendToFrontend = (backend: BackendDeployment): Deployment => {
         project: backend.projectName,
         environment: backend.environment.toLowerCase() as Deployment['environment'],
         status: statusMap[backend.status] || 'queued',
-        commitHash: backend.version.substring(0, 7),
+        commitHash: backend.commitHash || backend.version.substring(0, 7),
         commitMessage: backend.notes || `Deploy ${backend.version}`,
-        author: 'system',
+        author: backend.author || 'system',
         timestamp: new Date(backend.deployedAt).toLocaleString(),
-        duration: backend.status === 1 ? '45s' : backend.status === 2 ? 'Failed' : 'Running...',
-        branch: 'main'
+        duration: backend.duration || (backend.status === 1 ? '45s' : backend.status === 2 ? 'Failed' : 'Running...'),
+        branch: backend.branch || 'main',
+        logs: backend.logsJson ? JSON.parse(backend.logsJson) : [],
+        timeline: backend.timelineJson ? JSON.parse(backend.timelineJson) : []
     };
 };
 

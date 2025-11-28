@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Rocket, CheckCircle2, XCircle, Loader2, Clock, GitCommit, AlertTriangle, Github, RotateCcw, Terminal, Activity } from 'lucide-react';
@@ -18,110 +18,36 @@ const DeploymentDetailsPage: React.FC = () => {
         }
     }, [deploymentId]);
 
-    // Mock deployment data - different scenarios based on ID
-    const getMockDeployment = (id: string | undefined) => {
-        // Building deployment (dep-2)
-        if (id === 'dep-2') {
-            return {
-                id,
-                project: 'frontend-dashboard',
-                environment: 'preview' as const,
-                status: 'building' as const,
-                commitHash: 'e5f6g7h',
-                commitMessage: 'fix: modal positioning issue',
-                author: 'antigravity',
-                timestamp: 'Just now',
-                duration: 'Running...',
-                branch: 'fix/modal-position',
-                triggeredBy: 'GitHub Actions',
-                logs: [
-                    { time: '00:00', level: 'info', message: 'Starting deployment...' },
-                    { time: '00:01', level: 'info', message: 'Pulling latest code from fix/modal-position branch' },
-                    { time: '00:03', level: 'info', message: 'Installing dependencies...' },
-                    { time: '00:15', level: 'info', message: 'Running build process...' },
-                    { time: '00:30', level: 'info', message: 'Build in progress...' },
-                ],
-                timeline: [
-                    { step: 'Queued', status: 'completed' as const, duration: '1s' },
-                    { step: 'Building', status: 'in-progress' as const, duration: '30s+' },
-                    { step: 'Testing', status: 'pending' as const, duration: '-' },
-                    { step: 'Deploying', status: 'pending' as const, duration: '-' },
-                    { step: 'Health Check', status: 'pending' as const, duration: '-' },
-                ]
-            };
-        }
+    const [deployment, setDeployment] = useState<any | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-        // Failed deployment (dep-3)
-        if (id === 'dep-3') {
-            return {
-                id,
-                project: 'payment-gateway',
-                environment: 'production' as const,
-                status: 'failed' as const,
-                commitHash: 'i8j9k0l',
-                commitMessage: 'chore: update stripe api version',
-                author: 'alex',
-                timestamp: '5h ago',
-                duration: '1m 20s',
-                branch: 'main',
-                triggeredBy: 'GitHub Actions',
-                logs: [
-                    { time: '00:00', level: 'info', message: 'Starting deployment...' },
-                    { time: '00:01', level: 'info', message: 'Pulling latest code from main branch' },
-                    { time: '00:03', level: 'info', message: 'Installing dependencies...' },
-                    { time: '00:15', level: 'info', message: 'Running build process...' },
-                    { time: '00:45', level: 'info', message: 'Build completed successfully' },
-                    { time: '00:47', level: 'info', message: 'Running tests...' },
-                    { time: '01:05', level: 'error', message: 'Test failed: stripe_api_integration_test' },
-                    { time: '01:06', level: 'error', message: 'Error: Invalid API key format' },
-                    { time: '01:20', level: 'error', message: 'Deployment failed - rolling back changes' },
-                ],
-                timeline: [
-                    { step: 'Queued', status: 'completed' as const, duration: '1s' },
-                    { step: 'Building', status: 'completed' as const, duration: '42s' },
-                    { step: 'Testing', status: 'failed' as const, duration: '18s' },
-                    { step: 'Deploying', status: 'pending' as const, duration: '-' },
-                    { step: 'Health Check', status: 'pending' as const, duration: '-' },
-                ]
-            };
+    useEffect(() => {
+        if (deploymentId) {
+            loadDeployment(deploymentId);
         }
+    }, [deploymentId]);
 
-        // Default successful deployment (dep-1 or any other)
-        return {
-            id: id || 'dep-1',
-            project: 'auth-service',
-            environment: 'production' as const,
-            status: 'success' as const,
-            commitHash: 'a1b2c3d',
-            commitMessage: 'feat: implement OIDC provider',
-            author: 'enes',
-            timestamp: '2h ago',
-            duration: '45s',
-            branch: 'main',
-            triggeredBy: 'GitHub Actions',
-            logs: [
-                { time: '00:00', level: 'info', message: 'Starting deployment...' },
-                { time: '00:01', level: 'info', message: 'Pulling latest code from main branch' },
-                { time: '00:03', level: 'info', message: 'Installing dependencies...' },
-                { time: '00:15', level: 'info', message: 'Running build process...' },
-                { time: '00:30', level: 'info', message: 'Build completed successfully' },
-                { time: '00:32', level: 'info', message: 'Running tests...' },
-                { time: '00:38', level: 'success', message: 'All tests passed (24/24)' },
-                { time: '00:40', level: 'info', message: 'Deploying to production...' },
-                { time: '00:43', level: 'info', message: 'Health check passed' },
-                { time: '00:45', level: 'success', message: 'Deployment completed successfully' },
-            ],
-            timeline: [
-                { step: 'Queued', status: 'completed' as const, duration: '1s' },
-                { step: 'Building', status: 'completed' as const, duration: '30s' },
-                { step: 'Testing', status: 'completed' as const, duration: '8s' },
-                { step: 'Deploying', status: 'completed' as const, duration: '5s' },
-                { step: 'Health Check', status: 'completed' as const, duration: '1s' },
-            ]
-        };
+    const loadDeployment = async (id: string) => {
+        setIsLoading(true);
+        try {
+            const data = await import('../services/deploymentService').then(m => m.getDeploymentById(id));
+            setDeployment(data);
+        } catch (error) {
+            console.error('Failed to load deployment:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const deployment = getMockDeployment(deploymentId);
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 text-zinc-500 animate-spin" />
+            </div>
+        );
+    }
+
+    if (!deployment) return <div>Deployment not found</div>;
 
     if (!deployment) return <div>Deployment not found</div>;
 

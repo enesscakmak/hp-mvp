@@ -26,5 +26,17 @@ namespace IncidentDashboard.Models
         public DateTime DeployedAt { get; set; } = DateTime.UtcNow;
 
         public string Notes { get; set; } = string.Empty;
+
+        public string CommitHash { get; set; } = string.Empty;
+
+        public string Author { get; set; } = "system";
+
+        public string Branch { get; set; } = "main";
+
+        public string Duration { get; set; } = string.Empty;
+
+        public string LogsJson { get; set; } = "[]";
+
+        public string TimelineJson { get; set; } = "[]";
     }
 }

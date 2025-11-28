@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Filter, LayoutGrid, List, ChevronDown, Loader2 } from 'lucide-react';
 import ProjectCard, { Project } from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
+import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
 import { projectService } from '../services/projectService';
 import { clsx } from 'clsx';
 
@@ -14,6 +15,8 @@ const ProjectsPage: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<'all' | 'healthy' | 'warning' | 'down'>('all');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
+    const [selectedProjectForDeploy, setSelectedProjectForDeploy] = useState<Project | null>(null);
 
     useEffect(() => {
         loadProjects();
@@ -171,7 +174,16 @@ const ProjectsPage: React.FC = () => {
                     >
                         {filteredProjects.map((project) => (
                             <motion.div key={project.id} variants={item}>
-                                <ProjectCard project={project} />
+                                <ProjectCard
+                                    project={project}
+                                    onDeploy={() => {
+                                        // We'll need to update the modal to accept a pre-selected project
+                                        // For now, just open it, and we'll add state for selected project
+                                        setSelectedProjectForDeploy(project);
+                                        setIsCreateModalOpen(false); // Ensure create modal is closed
+                                        setIsDeployModalOpen(true);
+                                    }}
+                                />
                             </motion.div>
                         ))}
                     </motion.div>
@@ -189,6 +201,18 @@ const ProjectsPage: React.FC = () => {
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onProjectCreated={handleProjectCreated}
+            />
+
+            <TriggerDeploymentModal
+                isOpen={isDeployModalOpen}
+                onClose={() => {
+                    setIsDeployModalOpen(false);
+                    setSelectedProjectForDeploy(null);
+                }}
+                onSuccess={() => {
+                    loadProjects(); // Refresh projects to show new deployment status if needed
+                }}
+                preselectedProject={selectedProjectForDeploy?.name}
             />
         </div>
     );

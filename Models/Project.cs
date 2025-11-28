@@ -16,5 +16,7 @@ namespace IncidentDashboard.Models
         public string LastDeploy { get; set; } = "Never";
 
         public string Framework { get; set; } = "react"; // react, node, python, go
+
+        public string? RepoUrl { get; set; }
     }
 }
