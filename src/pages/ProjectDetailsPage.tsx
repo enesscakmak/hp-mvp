@@ -16,11 +16,11 @@ import {
     Trash2
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { formatTimeAgo } from '../utils/dateUtils';
+import { formatTimeAgo, formatDateTime } from '../utils/dateUtils';
 import StatCard from '../components/StatCard';
 import { projectService } from '../services/projectService';
 import { getDeployments, Deployment } from '../services/deploymentService';
-import { getIncidents, Incident } from '../services/incidentService';
+import { getIncidents, Incident, getSeverityString, getStatusString } from '../services/incidentService';
 import { Project } from '../components/ProjectCard';
 import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
 
@@ -287,7 +287,7 @@ const ProjectDetailsPage: React.FC = () => {
                                             </div>
                                             <div>
                                                 <p className="text-xs font-mono text-zinc-500 uppercase mb-1">Last Deploy</p>
-                                                <p className="text-white font-mono">{formatTimeAgo(project.lastDeploy)}</p>
+                                                <p className="text-white font-mono">{formatDateTime(project.lastDeploy)}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -419,11 +419,11 @@ const ProjectDetailsPage: React.FC = () => {
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-3 mb-2">
                                                         <h4 className="font-medium text-white">{incident.title}</h4>
-                                                        <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono ${getSeverityColor(incident.severity)}`}>
-                                                            {['Low', 'Medium', 'High', 'Critical'][incident.severity]}
+                                                        <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono capitalize ${getSeverityColor(incident.severity)}`}>
+                                                            {getSeverityString(incident.severity)}
                                                         </span>
-                                                        <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono ${getStatusColor(incident.status)}`}>
-                                                            {['Open', 'Investigating', 'Resolved', 'Closed'][incident.status]}
+                                                        <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono capitalize ${getStatusColor(incident.status)}`}>
+                                                            {getStatusString(incident.status)}
                                                         </span>
                                                     </div>
                                                     <p className="text-sm text-zinc-400">{incident.description}</p>

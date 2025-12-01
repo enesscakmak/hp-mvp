@@ -10,20 +10,11 @@ import {
     Loader2
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { getIncidents, Incident } from '../services/incidentService';
+import { getIncidents, Incident, getSeverityString, getStatusString } from '../services/incidentService';
 import { formatDateTime } from '../utils/dateUtils';
 import CustomDropdown from '../components/CustomDropdown';
 
-// Helper functions to convert numeric enums to strings
-const getSeverityString = (severity: number): 'low' | 'medium' | 'high' | 'critical' => {
-    const map = ['low', 'medium', 'high', 'critical'] as const;
-    return map[severity] || 'low';
-};
 
-const getStatusString = (status: number): 'open' | 'investigating' | 'resolved' | 'closed' => {
-    const map = ['open', 'investigating', 'resolved', 'closed'] as const;
-    return map[status] || 'open';
-};
 
 const IncidentsPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
