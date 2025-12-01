@@ -17,6 +17,18 @@ import { getIncidentById, Incident, resolveIncident, closeIncident, reassignInci
 import { AnimatePresence } from 'framer-motion';
 import ChecklistSection from '../components/ChecklistSection';
 import { toast } from 'sonner';
+import { formatTimeAgo } from '../utils/dateUtils';
+
+// Helper functions to convert numeric enums to strings
+const getSeverityString = (severity: number): 'low' | 'medium' | 'high' | 'critical' => {
+    const map = ['low', 'medium', 'high', 'critical'] as const;
+    return map[severity] || 'low';
+};
+
+const getStatusString = (status: number): 'open' | 'investigating' | 'resolved' | 'closed' => {
+    const map = ['open', 'investigating', 'resolved', 'closed'] as const;
+    return map[status] || 'open';
+};
 
 const IncidentDetailsPage: React.FC = () => {
     const { incidentId } = useParams();
@@ -62,8 +74,9 @@ const IncidentDetailsPage: React.FC = () => {
         toast.success(`Incident reassigned to ${updated.assignedTo}`);
     };
 
-    const getSeverityColor = (severity: Incident['severity']) => {
-        switch (severity) {
+    const getSeverityColor = (severity: number) => {
+        const severityStr = getSeverityString(severity);
+        switch (severityStr) {
             case 'critical': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
             case 'high': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
             case 'medium': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
@@ -71,8 +84,9 @@ const IncidentDetailsPage: React.FC = () => {
         }
     };
 
-    const getStatusColor = (status: Incident['status']) => {
-        switch (status) {
+    const getStatusColor = (status: number) => {
+        const statusStr = getStatusString(status);
+        switch (statusStr) {
             case 'resolved':
             case 'closed':
                 return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
@@ -83,8 +97,9 @@ const IncidentDetailsPage: React.FC = () => {
         }
     };
 
-    const getStatusIcon = (status: Incident['status']) => {
-        switch (status) {
+    const getStatusIcon = (status: number) => {
+        const statusStr = getStatusString(status);
+        switch (statusStr) {
             case 'resolved':
             case 'closed':
                 return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
@@ -98,10 +113,10 @@ const IncidentDetailsPage: React.FC = () => {
     // Mock timeline data
     const timeline = [
         { time: '2h ago', action: 'Incident created', user: 'System', status: 'open' },
-        { time: '1h 45m ago', action: 'Assigned to enes', user: 'System', status: 'open' },
-        { time: '1h 30m ago', action: 'Status changed to investigating', user: 'enes', status: 'investigating' },
-        ...(incident?.status === 'resolved' || incident?.status === 'closed'
-            ? [{ time: '1h ago', action: 'Incident resolved', user: 'enes', status: 'resolved' }]
+        { time: '1h 45m ago', action: 'Assigned to ' + (incident?.assignedTo || 'unknown'), user: 'System', status: 'open' },
+        { time: '1h 30m ago', action: 'Status changed to investigating', user: incident?.assignedTo || 'unknown', status: 'investigating' },
+        ...(incident?.status === 2 || incident?.status === 3
+            ? [{ time: '1h ago', action: 'Incident resolved', user: incident?.assignedTo || 'unknown', status: 'resolved' }]
             : []
         )
     ];
@@ -150,18 +165,18 @@ const IncidentDetailsPage: React.FC = () => {
                                     <span className={clsx("px-2 py-0.5 rounded-sm text-xs font-mono border uppercase",
                                         getSeverityColor(incident.severity)
                                     )}>
-                                        {incident.severity}
+                                        {getSeverityString(incident.severity)}
                                     </span>
                                     <span className={clsx("px-2 py-0.5 rounded-sm text-xs font-mono border uppercase",
                                         getStatusColor(incident.status)
                                     )}>
-                                        {incident.status}
+                                        {getStatusString(incident.status)}
                                     </span>
                                 </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            {incident.status !== 'resolved' && incident.status !== 'closed' && (
+                            {incident.status !== 2 && incident.status !== 3 && (
                                 <button
                                     onClick={handleResolve}
                                     className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-sm text-sm font-medium hover:bg-emerald-500/20 transition-all"
@@ -170,7 +185,7 @@ const IncidentDetailsPage: React.FC = () => {
                                     <span>Resolve</span>
                                 </button>
                             )}
-                            {incident.status === 'resolved' && (
+                            {incident.status === 2 && (
                                 <button
                                     onClick={handleClose}
                                     className="flex items-center gap-2 px-4 py-2 bg-zinc-500/10 border border-zinc-500/20 text-zinc-400 rounded-sm text-sm font-medium hover:bg-zinc-500/20 transition-all"
@@ -238,12 +253,12 @@ const IncidentDetailsPage: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <p className="text-xs font-mono text-zinc-500 uppercase mb-1">Created</p>
-                                    <p className="text-white font-mono">{incident.createdAt}</p>
+                                    <p className="text-white font-mono">{formatTimeAgo(incident.createdAt)}</p>
                                 </div>
                                 {incident.resolvedAt && (
                                     <div>
                                         <p className="text-xs font-mono text-zinc-500 uppercase mb-1">Resolved</p>
-                                        <p className="text-white font-mono">{incident.resolvedAt}</p>
+                                        <p className="text-white font-mono">{formatTimeAgo(incident.resolvedAt)}</p>
                                     </div>
                                 )}
                                 {incident.assignedTo && (
@@ -256,7 +271,7 @@ const IncidentDetailsPage: React.FC = () => {
                         </div>
 
                         {/* Checklists */}
-                        <ChecklistSection targetId={incident.id} targetType="incident" />
+                        <ChecklistSection targetId={incident.id.toString()} targetType="incident" />
 
                         {/* Related Deployment */}
                         {incident.deploymentId && (

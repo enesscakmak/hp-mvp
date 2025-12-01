@@ -3,37 +3,57 @@ import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Rocket, CheckCircle2, XCircle, Loader2, Clock, GitCommit, AlertTriangle, Github, RotateCcw, Terminal, Activity } from 'lucide-react';
 import { clsx } from 'clsx';
-import { getIncidentsByDeploymentId, Incident } from '../services/incidentService';
+import { getIncidentsByDeploymentId, Incident, getSeverityString, getStatusString } from '../services/incidentService';
 import ChecklistSection from '../components/ChecklistSection';
+import { getDeploymentById, Deployment } from '../services/deploymentService';
+import { formatTimeAgo, formatDateTime } from '../utils/dateUtils';
+
+interface LogEntry {
+    time: string;
+    level: 'info' | 'error' | 'success' | 'warning';
+    message: string;
+}
+
+interface TimelineStep {
+    step: string;
+    status: 'completed' | 'in-progress' | 'pending' | 'failed';
+    duration: string;
+}
 
 const DeploymentDetailsPage: React.FC = () => {
     const { deploymentId } = useParams();
     const [activeTab, setActiveTab] = useState<'logs' | 'timeline'>('logs');
     const [incidents, setIncidents] = useState<Incident[]>([]);
-
-    // Load incidents for this deployment
-    React.useEffect(() => {
-        if (deploymentId) {
-            getIncidentsByDeploymentId(deploymentId).then(setIncidents);
-        }
-    }, [deploymentId]);
-
-    const [deployment, setDeployment] = useState<any | null>(null);
+    const [deployment, setDeployment] = useState<Deployment | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [timeline, setTimeline] = useState<TimelineStep[]>([]);
 
     useEffect(() => {
         if (deploymentId) {
-            loadDeployment(deploymentId);
+            loadData(deploymentId);
         }
     }, [deploymentId]);
 
-    const loadDeployment = async (id: string) => {
-        setIsLoading(true);
+    const loadData = async (id: string) => {
         try {
-            const data = await import('../services/deploymentService').then(m => m.getDeploymentById(id));
-            setDeployment(data);
+            const [depData, incData] = await Promise.all([
+                getDeploymentById(id),
+                getIncidentsByDeploymentId(id)
+            ]);
+
+            if (depData) {
+                setDeployment(depData);
+                try {
+                    setLogs(JSON.parse(depData.logsJson || '[]'));
+                    setTimeline(JSON.parse(depData.timelineJson || '[]'));
+                } catch (e) {
+                    console.error('Failed to parse JSON data', e);
+                }
+            }
+            setIncidents(incData);
         } catch (error) {
-            console.error('Failed to load deployment:', error);
+            console.error('Failed to load deployment details', error);
         } finally {
             setIsLoading(false);
         }
@@ -47,25 +67,32 @@ const DeploymentDetailsPage: React.FC = () => {
         );
     }
 
-    if (!deployment) return <div>Deployment not found</div>;
+    if (!deployment) return <div className="min-h-screen bg-zinc-950 text-white p-8">Deployment not found</div>;
 
-    if (!deployment) return <div>Deployment not found</div>;
-
-    const getStatusIcon = (status: string) => {
+    const getStatusIcon = (status: number) => {
         switch (status) {
-            case 'success': return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
-            case 'failed': return <XCircle className="h-5 w-5 text-rose-500" />;
-            case 'building': return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />;
+            case 1: return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
+            case 2: return <XCircle className="h-5 w-5 text-rose-500" />;
+            case 0: return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />;
             default: return <Clock className="h-5 w-5 text-zinc-500" />;
         }
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusColor = (status: number) => {
         switch (status) {
-            case 'success': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-            case 'failed': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-            case 'building': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+            case 1: return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+            case 2: return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+            case 0: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
             default: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
+        }
+    };
+
+    const getStatusText = (status: number) => {
+        switch (status) {
+            case 1: return 'success';
+            case 2: return 'failed';
+            case 0: return 'building';
+            default: return 'queued';
         }
     };
 
@@ -92,7 +119,7 @@ const DeploymentDetailsPage: React.FC = () => {
                     <div className="flex items-center gap-2 text-sm font-mono text-zinc-500 mb-4">
                         <Link to="/deployments" className="hover:text-white transition-colors">Deployments</Link>
                         <ChevronRight className="h-4 w-4" />
-                        <span className="text-white">{deployment.project}</span>
+                        <span className="text-white">{deployment.projectName}</span>
                         <ChevronRight className="h-4 w-4" />
                         <span className="text-white">{deployment.commitHash}</span>
                     </div>
@@ -104,10 +131,10 @@ const DeploymentDetailsPage: React.FC = () => {
                             </div>
                             <div>
                                 <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-                                    {deployment.project}
+                                    {deployment.projectName}
                                     <span className={clsx("px-2 py-0.5 rounded-sm text-xs font-mono border uppercase",
-                                        deployment.environment === 'production' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
-                                            deployment.environment === 'staging' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                                        deployment.environment.toLowerCase() === 'production' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                                            deployment.environment.toLowerCase() === 'staging' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
                                                 "bg-blue-500/10 text-blue-400 border-blue-500/20"
                                     )}>
                                         {deployment.environment}
@@ -115,7 +142,7 @@ const DeploymentDetailsPage: React.FC = () => {
                                     <span className={clsx("px-2 py-0.5 rounded-full text-xs font-mono border uppercase",
                                         getStatusColor(deployment.status)
                                     )}>
-                                        {deployment.status}
+                                        {getStatusText(deployment.status)}
                                     </span>
                                 </h1>
                                 <div className="flex items-center gap-4 text-sm text-zinc-400 mt-2">
@@ -125,7 +152,7 @@ const DeploymentDetailsPage: React.FC = () => {
                                         <span className="text-zinc-300">{deployment.commitMessage}</span>
                                     </div>
                                     <span>•</span>
-                                    <span>{deployment.timestamp}</span>
+                                    <span>{formatTimeAgo(deployment.deployedAt)}</span>
                                     <span>•</span>
                                     <span>{deployment.duration}</span>
                                 </div>
@@ -184,7 +211,7 @@ const DeploymentDetailsPage: React.FC = () => {
                                 </button>
                             </div>
                             <div className="p-4 font-mono text-sm space-y-1 max-h-[600px] overflow-y-auto">
-                                {deployment.logs.map((log, index) => (
+                                {logs.map((log, index) => (
                                     <div key={index} className="flex items-start gap-4">
                                         <span className="text-zinc-600 select-none">{log.time}</span>
                                         <span className={clsx("flex-1", getLogColor(log.level))}>
@@ -192,6 +219,9 @@ const DeploymentDetailsPage: React.FC = () => {
                                         </span>
                                     </div>
                                 ))}
+                                {logs.length === 0 && (
+                                    <div className="text-zinc-500 italic">No logs available</div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -211,7 +241,7 @@ const DeploymentDetailsPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            {deployment.timeline.map((step, index) => (
+                            {timeline.map((step, index) => (
                                 <div key={index} className="flex items-start gap-4">
                                     <div className="flex flex-col items-center">
                                         <div className={clsx("h-8 w-8 rounded-full border-2 flex items-center justify-center",
@@ -224,7 +254,7 @@ const DeploymentDetailsPage: React.FC = () => {
                                             {step.status === 'in-progress' && <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />}
                                             {step.status === 'failed' && <XCircle className="h-4 w-4 text-rose-500" />}
                                         </div>
-                                        {index < deployment.timeline.length - 1 && (
+                                        {index < timeline.length - 1 && (
                                             <div className={clsx("w-0.5 h-16 mt-2",
                                                 step.status === 'completed' ? "bg-emerald-500/30" :
                                                     step.status === 'in-progress' ? "bg-blue-500/30" :
@@ -245,34 +275,34 @@ const DeploymentDetailsPage: React.FC = () => {
                             <div className="flex items-start gap-4">
                                 <div className="flex flex-col items-center">
                                     <div className={clsx("w-0.5 h-4",
-                                        deployment.status === 'success' ? "bg-emerald-500/30" :
-                                            deployment.status === 'failed' ? "bg-rose-500/30" :
+                                        deployment.status === 1 ? "bg-emerald-500/30" :
+                                            deployment.status === 2 ? "bg-rose-500/30" :
                                                 "bg-zinc-800"
                                     )} />
                                     <div className={clsx("h-10 w-10 rounded-full border-2 flex items-center justify-center",
-                                        deployment.status === 'success' ? "bg-emerald-500/10 border-emerald-500" :
-                                            deployment.status === 'failed' ? "bg-rose-500/10 border-rose-500" :
-                                                deployment.status === 'building' ? "bg-blue-500/10 border-blue-500 animate-pulse" :
+                                        deployment.status === 1 ? "bg-emerald-500/10 border-emerald-500" :
+                                            deployment.status === 2 ? "bg-rose-500/10 border-rose-500" :
+                                                deployment.status === 0 ? "bg-blue-500/10 border-blue-500 animate-pulse" :
                                                     "bg-zinc-900 border-zinc-700"
                                     )}>
-                                        {deployment.status === 'success' && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-                                        {deployment.status === 'failed' && <XCircle className="h-5 w-5 text-rose-500" />}
-                                        {deployment.status === 'building' && <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />}
+                                        {deployment.status === 1 && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                                        {deployment.status === 2 && <XCircle className="h-5 w-5 text-rose-500" />}
+                                        {deployment.status === 0 && <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />}
                                     </div>
                                 </div>
                                 <div className="flex-1 pt-2">
                                     <p className={clsx("text-sm font-mono uppercase font-medium",
-                                        deployment.status === 'success' ? "text-emerald-400" :
-                                            deployment.status === 'failed' ? "text-rose-400" :
-                                                deployment.status === 'building' ? "text-blue-400" :
+                                        deployment.status === 1 ? "text-emerald-400" :
+                                            deployment.status === 2 ? "text-rose-400" :
+                                                deployment.status === 0 ? "text-blue-400" :
                                                     "text-zinc-400"
                                     )}>
-                                        {deployment.status === 'success' && 'Deployment Completed Successfully'}
-                                        {deployment.status === 'failed' && 'Deployment Failed'}
-                                        {deployment.status === 'building' && 'Deployment In Progress'}
-                                        {deployment.status === 'queued' && 'Deployment Queued'}
+                                        {deployment.status === 1 && 'Deployment Completed Successfully'}
+                                        {deployment.status === 2 && 'Deployment Failed'}
+                                        {deployment.status === 0 && 'Deployment In Progress'}
+                                        {deployment.status === 3 && 'Deployment Queued'}
                                     </p>
-                                    {deployment.status === 'success' && (
+                                    {deployment.status === 1 && (
                                         <p className="text-xs text-zinc-500 mt-1">Total duration: {deployment.duration}</p>
                                     )}
                                 </div>
@@ -283,7 +313,7 @@ const DeploymentDetailsPage: React.FC = () => {
 
                 {/* Checklists Section */}
                 <div className="mt-8">
-                    <ChecklistSection targetId={deployment.id} targetType="deployment" />
+                    <ChecklistSection targetId={deployment.id.toString()} targetType="deployment" />
                 </div>
 
                 {/* Incidents Section */}
@@ -305,25 +335,25 @@ const DeploymentDetailsPage: React.FC = () => {
                                             <div className="flex items-center gap-2 mb-2">
                                                 <h3 className="font-medium text-white group-hover:text-emerald-400 transition-colors">{incident.title}</h3>
                                                 <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
-                                                    incident.severity === 'critical' ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
-                                                        incident.severity === 'high' ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" :
-                                                            incident.severity === 'medium' ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
+                                                    getSeverityString(incident.severity) === 'critical' ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
+                                                        getSeverityString(incident.severity) === 'high' ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" :
+                                                            getSeverityString(incident.severity) === 'medium' ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
                                                                 "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
                                                 )}>
-                                                    {incident.severity}
+                                                    {getSeverityString(incident.severity)}
                                                 </span>
                                                 <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
-                                                    incident.status === 'resolved' || incident.status === 'closed' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
-                                                        incident.status === 'investigating' ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
+                                                    getStatusString(incident.status) === 'resolved' || getStatusString(incident.status) === 'closed' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
+                                                        getStatusString(incident.status) === 'investigating' ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
                                                             "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
                                                 )}>
-                                                    {incident.status}
+                                                    {getStatusString(incident.status)}
                                                 </span>
                                             </div>
                                             <p className="text-sm text-zinc-400">{incident.description}</p>
                                             <div className="flex items-center gap-4 mt-2 text-xs text-zinc-500 font-mono">
-                                                <span>Created {incident.createdAt}</span>
-                                                {incident.resolvedAt && <span>• Resolved {incident.resolvedAt}</span>}
+                                                <span>Created {formatDateTime(incident.createdAt)}</span>
+                                                {incident.resolvedAt && <span>• Resolved {formatDateTime(incident.resolvedAt)}</span>}
                                                 {incident.assignedTo && <span>• Assigned to {incident.assignedTo}</span>}
                                             </div>
                                         </div>

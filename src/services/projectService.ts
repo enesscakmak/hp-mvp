@@ -1,73 +1,89 @@
-import { api } from './api';
+
+
+const API_URL = 'http://localhost:5069/api/projects';
 
 export interface Project {
-  id: string;
+  id: number;
   name: string;
   description: string;
   status: 'healthy' | 'warning' | 'down';
   lastDeploy: string;
   framework: 'react' | 'node' | 'python' | 'go';
+  repoUrl?: string;
+  uptime?: string;
+  errorRate?: string;
+  avgLatency?: string;
+  activeUsers?: string;
 }
 
 export const projectService = {
   getProjects: async (): Promise<Project[]> => {
-    const projects = await api.get<Project[]>('/Projects');
-    return projects.map(p => ({ ...p, id: p.id.toString() }));
+    const response = await fetch(API_URL);
+    if (!response.ok) {
+      throw new Error('Failed to fetch projects');
+    }
+    return response.json();
   },
 
-  getProjectById: async (id: string): Promise<Project | undefined> => {
-    try {
-      const project = await api.get<Project>(`/Projects/${id}`);
-      return { ...project, id: project.id.toString() };
-    } catch (error) {
-      return undefined;
+  getProjectById: async (id: string | number): Promise<Project | undefined> => {
+    const response = await fetch(`${API_URL}/${id}`);
+    if (!response.ok) {
+      if (response.status === 404) return undefined;
+      throw new Error('Failed to fetch project');
     }
+    return response.json();
   },
 
   createProject: async (project: Omit<Project, 'id' | 'status' | 'lastDeploy'>): Promise<Project> => {
-    const backendData = {
-      name: project.name,
-      description: project.description,
-      framework: project.framework,
-      status: 'healthy',
-      lastDeploy: 'Just now'
-    };
-
-    const newProject = await api.post<any>('/Projects', backendData);
-    return {
-      id: newProject.id.toString(),
-      name: newProject.name,
-      description: newProject.description,
-      status: newProject.status as Project['status'],
-      lastDeploy: newProject.lastDeploy,
-      framework: newProject.framework as Project['framework'],
-      repoUrl: newProject.repoUrl
-    };
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...project,
+        status: 'healthy',
+        lastDeploy: 'Unknown'
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to create project');
+    }
+    return response.json();
   },
 
-  updateProject: async (id: string, updates: Partial<Project>): Promise<Project> => {
-    // First get the current project to ensure we have all fields
-    const currentProject = await projectService.getProjectById(id);
-    if (!currentProject) {
+  updateProject: async (id: string | number, updates: Partial<Project>): Promise<Project> => {
+    // First get the current project
+    const current = await projectService.getProjectById(id);
+    if (!current) {
       throw new Error('Project not found');
     }
 
-    // Merge updates with current project
-    const updatedData = {
-      id: parseInt(id),
-      name: updates.name ?? currentProject.name,
-      description: updates.description ?? currentProject.description,
-      status: currentProject.status,
-      lastDeploy: currentProject.lastDeploy,
-      framework: currentProject.framework,
-      repoUrl: updates.repoUrl ?? currentProject.repoUrl
-    };
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...current,
+        ...updates
+      }),
+    });
 
-    const result = await api.put<Project>(`/Projects/${id}`, updatedData);
-    return { ...result, id: result.id.toString() };
+    if (!response.ok) {
+      throw new Error('Failed to update project');
+    }
+
+    // PUT returns NoContent, so return the updated project
+    return { ...current, ...updates };
   },
 
-  deleteProject: async (id: string): Promise<void> => {
-    await api.delete(`/Projects/${id}`);
+  deleteProject: async (id: string | number): Promise<void> => {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete project');
+    }
   }
 };

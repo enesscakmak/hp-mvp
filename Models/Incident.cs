@@ -45,10 +45,10 @@ namespace IncidentDashboard.Models
 
         public DateTime? ResolvedAt { get; set; }
 
+        public string? AssignedTo { get; set; }
+
         public int? DeploymentId { get; set; }
 
         public int? ProjectId { get; set; }
-
-        public string? AssignedTo { get; set; }
     }
 }

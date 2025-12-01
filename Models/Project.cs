@@ -17,6 +17,14 @@ namespace IncidentDashboard.Models
 
         public string Framework { get; set; } = "react"; // react, node, python, go
 
-        public string? RepoUrl { get; set; }
+        public string Uptime { get; set; } = "0%";
+
+        public string ErrorRate { get; set; } = "0%";
+
+        public string AvgLatency { get; set; } = "0ms";
+
+        public string ActiveUsers { get; set; } = "0";
+
+        public string? RepoUrl { get; set; } = "Never";
     }
 }

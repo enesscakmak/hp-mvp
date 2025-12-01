@@ -1,20 +1,4 @@
-import { api } from './api';
-
 export interface Incident {
-    id: string;
-    title: string;
-    description: string;
-    severity: 'critical' | 'high' | 'medium' | 'low';
-    status: 'open' | 'investigating' | 'resolved' | 'closed';
-    deploymentId?: string;
-    projectId?: string;
-    createdAt: string;
-    resolvedAt?: string;
-    assignedTo?: string;
-}
-
-// Backend model mapping
-interface BackendIncident {
     id: number;
     title: string;
     description: string;
@@ -23,133 +7,113 @@ interface BackendIncident {
     status: number; // 0=Open, 1=InProgress, 2=Resolved, 3=Closed
     createdAt: string;
     resolvedAt?: string;
+    assignedTo?: string;
     deploymentId?: number;
     projectId?: number;
-    assignedTo?: string;
 }
 
-const mapBackendToFrontend = (backend: BackendIncident): Incident => {
-    const severityMap: Record<number, Incident['severity']> = {
-        0: 'low',
-        1: 'medium',
-        2: 'high',
-        3: 'critical'
-    };
+const API_URL = 'http://localhost:5069/api/incidents';
 
-    const statusMap: Record<number, Incident['status']> = {
-        0: 'open',
-        1: 'investigating',
-        2: 'resolved',
-        3: 'closed'
-    };
+// Helper to convert backend enum to frontend string
+export const getSeverityString = (severity: number): 'low' | 'medium' | 'high' | 'critical' => {
+    const map = ['low', 'medium', 'high', 'critical'] as const;
+    return map[severity] || 'low';
+};
 
-    return {
-        id: backend.id.toString(),
-        title: backend.title,
-        description: backend.description,
-        severity: severityMap[backend.severity] || 'low',
-        status: statusMap[backend.status] || 'open',
-        createdAt: new Date(backend.createdAt).toLocaleString(),
-        resolvedAt: backend.resolvedAt ? new Date(backend.resolvedAt).toLocaleString() : undefined,
-        deploymentId: backend.deploymentId?.toString(),
-        projectId: backend.projectId?.toString(),
-        assignedTo: backend.assignedTo
-    };
+export const getStatusString = (status: number): 'open' | 'investigating' | 'resolved' | 'closed' => {
+    const map = ['open', 'investigating', 'resolved', 'closed'] as const;
+    return map[status] || 'open';
+};
+
+// Helper to convert frontend string to backend enum
+const getSeverityEnum = (severity: string): number => {
+    const map: Record<string, number> = { low: 0, medium: 1, high: 2, critical: 3 };
+    return map[severity] || 0;
+};
+
+const getStatusEnum = (status: string): number => {
+    const map: Record<string, number> = { open: 0, investigating: 1, resolved: 2, closed: 3 };
+    return map[status] || 0;
 };
 
 export const getIncidents = async (): Promise<Incident[]> => {
-    const incidents = await api.get<BackendIncident[]>('/Incidents');
-    return incidents.map(mapBackendToFrontend);
-};
-
-export const getIncidentById = async (id: string): Promise<Incident | null> => {
-    try {
-        const incident = await api.get<BackendIncident>(`/Incidents/${id}`);
-        return mapBackendToFrontend(incident);
-    } catch (error) {
-        return null;
+    const response = await fetch(API_URL);
+    if (!response.ok) {
+        throw new Error('Failed to fetch incidents');
     }
+    return response.json();
 };
 
-export const getIncidentsByDeploymentId = async (deploymentId: string): Promise<Incident[]> => {
-    // Note: Backend doesn't have deployment relationship yet
-    // For now, return all incidents
+export const getIncidentById = async (id: number | string): Promise<Incident | null> => {
+    const response = await fetch(`${API_URL}/${id}`);
+    if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error('Failed to fetch incident');
+    }
+    return response.json();
+};
+
+export const getIncidentsByDeploymentId = async (deploymentId: number | string): Promise<Incident[]> => {
     const incidents = await getIncidents();
-    return incidents.filter(i => i.deploymentId === deploymentId);
+    return incidents.filter(i => i.deploymentId?.toString() === deploymentId.toString());
 };
 
 export const createIncident = async (data: Omit<Incident, 'id' | 'createdAt'>): Promise<Incident> => {
-    const severityMap: Record<Incident['severity'], number> = {
-        'low': 0,
-        'medium': 1,
-        'high': 2,
-        'critical': 3
-    };
-
-    const statusMap: Record<Incident['status'], number> = {
-        'open': 0,
-        'investigating': 1,
-        'resolved': 2,
-        'closed': 3
-    };
-
-    const backendData = {
-        title: data.title,
-        description: data.description,
-        type: 0, // Default to Bug
-        severity: severityMap[data.severity],
-        status: statusMap[data.status],
-        createdAt: new Date().toISOString()
-    };
-
-    const newIncident = await api.post<BackendIncident>('/Incidents', backendData);
-    return mapBackendToFrontend(newIncident);
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ...data,
+            createdAt: new Date().toISOString()
+        }),
+    });
+    if (!response.ok) {
+        throw new Error('Failed to create incident');
+    }
+    return response.json();
 };
 
-export const updateIncident = async (id: string, updates: Partial<Incident>): Promise<Incident> => {
+export const updateIncident = async (id: number | string, updates: Partial<Incident>): Promise<Incident> => {
+    // First get the current incident
     const current = await getIncidentById(id);
-    if (!current) throw new Error('Incident not found');
+    if (!current) {
+        throw new Error('Incident not found');
+    }
 
-    const severityMap: Record<Incident['severity'], number> = {
-        'low': 0,
-        'medium': 1,
-        'high': 2,
-        'critical': 3
-    };
+    const response = await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ...current,
+            ...updates
+        }),
+    });
 
-    const statusMap: Record<Incident['status'], number> = {
-        'open': 0,
-        'investigating': 1,
-        'resolved': 2,
-        'closed': 3
-    };
+    if (!response.ok) {
+        throw new Error('Failed to update incident');
+    }
 
-    const backendData = {
-        id: parseInt(id),
-        title: updates.title || current.title,
-        description: updates.description || current.description,
-        type: 0,
-        severity: updates.severity ? severityMap[updates.severity] : severityMap[current.severity],
-        status: updates.status ? statusMap[updates.status] : statusMap[current.status],
-        createdAt: current.createdAt,
-        resolvedAt: updates.resolvedAt || current.resolvedAt
-    };
-
-    const updatedIncident = await api.put<BackendIncident>(`/Incidents/${id}`, backendData);
-    return mapBackendToFrontend(updatedIncident);
+    // PUT returns NoContent, so return the updated incident
+    return { ...current, ...updates };
 };
 
-export const resolveIncident = async (id: string): Promise<Incident> => {
+export const resolveIncident = async (id: number | string): Promise<Incident> => {
     return updateIncident(id, {
-        status: 'resolved',
+        status: 2, // Resolved
         resolvedAt: new Date().toISOString()
     });
 };
 
-export const closeIncident = async (id: string): Promise<Incident> => {
-    return updateIncident(id, { status: 'closed' });
+export const closeIncident = async (id: number | string): Promise<Incident> => {
+    return updateIncident(id, {
+        status: 3 // Closed
+    });
 };
 
-export const reassignIncident = async (id: string, assignedTo: string): Promise<Incident> => {
+export const reassignIncident = async (id: number | string, assignedTo: string): Promise<Incident> => {
     return updateIncident(id, { assignedTo });
 };

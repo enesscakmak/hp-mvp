@@ -11,11 +11,23 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getIncidents, Incident } from '../services/incidentService';
+import { formatDateTime } from '../utils/dateUtils';
 import CustomDropdown from '../components/CustomDropdown';
+
+// Helper functions to convert numeric enums to strings
+const getSeverityString = (severity: number): 'low' | 'medium' | 'high' | 'critical' => {
+    const map = ['low', 'medium', 'high', 'critical'] as const;
+    return map[severity] || 'low';
+};
+
+const getStatusString = (status: number): 'open' | 'investigating' | 'resolved' | 'closed' => {
+    const map = ['open', 'investigating', 'resolved', 'closed'] as const;
+    return map[status] || 'open';
+};
 
 const IncidentsPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterSeverity, setFilterSeverity] = useState<'all' | 'critical' | 'high' | 'medium' | 'low'>('all');
+    const [filterSeverity, setFilterSeverity] = useState<'all' | 'low' | 'medium' | 'high' | 'critical'>('all');
     const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'investigating' | 'resolved' | 'closed'>('all');
     const [incidents, setIncidents] = useState<Incident[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -34,13 +46,16 @@ const IncidentsPage: React.FC = () => {
     const filteredIncidents = incidents.filter(inc => {
         const matchesSearch = inc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             inc.description.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesSeverity = filterSeverity === 'all' || inc.severity === filterSeverity;
-        const matchesStatus = filterStatus === 'all' || inc.status === filterStatus;
+        const incidentSeverity = getSeverityString(inc.severity);
+        const incidentStatus = getStatusString(inc.status);
+        const matchesSeverity = filterSeverity === 'all' || incidentSeverity === filterSeverity;
+        const matchesStatus = filterStatus === 'all' || incidentStatus === filterStatus;
         return matchesSearch && matchesSeverity && matchesStatus;
     });
 
-    const getSeverityColor = (severity: Incident['severity']) => {
-        switch (severity) {
+    const getSeverityColor = (severity: number) => {
+        const severityStr = getSeverityString(severity);
+        switch (severityStr) {
             case 'critical': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
             case 'high': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
             case 'medium': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
@@ -48,8 +63,9 @@ const IncidentsPage: React.FC = () => {
         }
     };
 
-    const getStatusColor = (status: Incident['status']) => {
-        switch (status) {
+    const getStatusColor = (status: number) => {
+        const statusStr = getStatusString(status);
+        switch (statusStr) {
             case 'resolved':
             case 'closed':
                 return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
@@ -60,8 +76,9 @@ const IncidentsPage: React.FC = () => {
         }
     };
 
-    const getStatusIcon = (status: Incident['status']) => {
-        switch (status) {
+    const getStatusIcon = (status: number) => {
+        const statusStr = getStatusString(status);
+        switch (statusStr) {
             case 'resolved':
             case 'closed':
                 return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
@@ -168,18 +185,18 @@ const IncidentsPage: React.FC = () => {
                                                 <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono border",
                                                     getSeverityColor(incident.severity)
                                                 )}>
-                                                    {incident.severity}
+                                                    {getSeverityString(incident.severity)}
                                                 </span>
                                                 <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono border",
                                                     getStatusColor(incident.status)
                                                 )}>
-                                                    {incident.status}
+                                                    {getStatusString(incident.status)}
                                                 </span>
                                             </div>
                                             <p className="text-sm text-zinc-400 mb-2">{incident.description}</p>
                                             <div className="flex items-center gap-4 text-xs text-zinc-500 font-mono">
-                                                <span>Created {incident.createdAt}</span>
-                                                {incident.resolvedAt && <span>• Resolved {incident.resolvedAt}</span>}
+                                                <span>Created {formatDateTime(incident.createdAt)}</span>
+                                                {incident.resolvedAt && <span>• Resolved {formatDateTime(incident.resolvedAt)}</span>}
                                                 {incident.assignedTo && <span>• Assigned to {incident.assignedTo}</span>}
                                             </div>
                                         </div>

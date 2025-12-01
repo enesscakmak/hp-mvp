@@ -29,11 +29,13 @@ namespace IncidentDashboard.Models
 
         public string CommitHash { get; set; } = string.Empty;
 
-        public string Author { get; set; } = "system";
+        public string CommitMessage { get; set; } = string.Empty;
 
-        public string Branch { get; set; } = "main";
+        public string Author { get; set; } = string.Empty;
 
         public string Duration { get; set; } = string.Empty;
+
+        public string Branch { get; set; } = string.Empty;
 
         public string LogsJson { get; set; } = "[]";
 

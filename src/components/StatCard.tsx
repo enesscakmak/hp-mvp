@@ -7,8 +7,8 @@ import { Link } from 'react-router-dom';
 interface StatCardProps {
     title: string;
     value: string;
-    trend: string;
-    trendUp: boolean;
+    trend?: string;
+    trendUp?: boolean;
     icon: LucideIcon;
     to?: string;
 }
@@ -29,12 +29,14 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendUp, icon:
                 <div className="p-2 bg-zinc-800/50 rounded-sm border border-zinc-700/50 group-hover:border-zinc-500 transition-colors">
                     <Icon className="h-5 w-5 text-zinc-400 group-hover:text-white transition-colors" />
                 </div>
-                <span className={`text-xs font-mono px-2 py-1 rounded-sm border ${trendUp
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                    : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                    }`}>
-                    {trend}
-                </span>
+                {trend && (
+                    <span className={`text-xs font-mono px-2 py-1 rounded-sm border ${trendUp
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                        }`}>
+                        {trend}
+                    </span>
+                )}
             </div>
 
             <h3 className="text-zinc-500 text-xs font-mono uppercase tracking-wider mb-1">{title}</h3>

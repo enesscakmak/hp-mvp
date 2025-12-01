@@ -22,24 +22,19 @@ namespace IncidentDashboard.Controllers
         {
             var projects = await _context.Projects.ToListAsync();
             
-            // Get latest deployment for each project
-            var latestDeployments = await _context.Deployments
-                .GroupBy(d => d.ProjectName)
-                .Select(g => new { ProjectName = g.Key, LastDeploy = g.Max(d => d.DeployedAt) })
-                .ToDictionaryAsync(x => x.ProjectName, x => x.LastDeploy);
-
+            // Dynamically calculate LastDeploy for each project
             foreach (var project in projects)
             {
-                if (latestDeployments.TryGetValue(project.Name, out var lastDeploy))
-                {
-                    project.LastDeploy = lastDeploy.ToString("O");
-                }
-                else
-                {
-                    project.LastDeploy = "Unknown";
-                }
+                var latestDeployment = await _context.Deployments
+                    .Where(d => d.ProjectName == project.Name)
+                    .OrderByDescending(d => d.DeployedAt)
+                    .FirstOrDefaultAsync();
+                
+                project.LastDeploy = latestDeployment != null 
+                    ? latestDeployment.DeployedAt.ToString("o") 
+                    : "Unknown";
             }
-
+            
             return projects;
         }
 
@@ -54,20 +49,15 @@ namespace IncidentDashboard.Controllers
                 return NotFound();
             }
 
-            // Get latest deployment for this project
+            // Dynamically calculate LastDeploy
             var latestDeployment = await _context.Deployments
                 .Where(d => d.ProjectName == project.Name)
                 .OrderByDescending(d => d.DeployedAt)
                 .FirstOrDefaultAsync();
-
-            if (latestDeployment != null)
-            {
-                project.LastDeploy = latestDeployment.DeployedAt.ToString("O");
-            }
-            else
-            {
-                project.LastDeploy = "Unknown";
-            }
+            
+            project.LastDeploy = latestDeployment != null 
+                ? latestDeployment.DeployedAt.ToString("o") 
+                : "Unknown";
 
             return project;
         }

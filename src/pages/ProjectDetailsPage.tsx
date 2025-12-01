@@ -16,13 +16,14 @@ import {
     Trash2
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { formatTimeAgo } from '../utils/dateUtils';
 import StatCard from '../components/StatCard';
 import { projectService } from '../services/projectService';
-import { Project } from '../components/ProjectCard';
-import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
 import { getDeployments, Deployment } from '../services/deploymentService';
 import { getIncidents, Incident } from '../services/incidentService';
-import { formatTimeAgo } from '../utils/dateUtils';
+import { Project } from '../components/ProjectCard';
+import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
+
 
 const ProjectDetailsPage: React.FC = () => {
     const { projectId } = useParams();
@@ -58,7 +59,7 @@ const ProjectDetailsPage: React.FC = () => {
 
     const loadProject = async (id: string) => {
         try {
-            const [projectData, allDeployments, allIncidents] = await Promise.all([
+            const [projectData, deploymentsData, incidentsData] = await Promise.all([
                 projectService.getProjectById(id),
                 getDeployments(),
                 getIncidents()
@@ -72,16 +73,15 @@ const ProjectDetailsPage: React.FC = () => {
                     repoUrl: projectData.repoUrl || ''
                 });
 
-                // Filter deployments by project name
-                const projectDeployments = allDeployments.filter(
-                    d => d.project.toLowerCase() === projectData.name.toLowerCase()
+                // Filter deployments and incidents for this project
+                const projectDeployments = deploymentsData.filter(
+                    d => d.projectName === projectData.name
                 );
-                setDeployments(projectDeployments);
+                const projectIncidents = incidentsData.filter(
+                    i => i.projectId === projectData.id
+                );
 
-                // Filter incidents by project ID
-                const projectIncidents = allIncidents.filter(
-                    i => i.projectId?.toString() === id
-                );
+                setDeployments(projectDeployments);
                 setIncidents(projectIncidents);
             }
         } catch (error) {
@@ -150,14 +150,6 @@ const ProjectDetailsPage: React.FC = () => {
         { id: 'incidents', label: 'Incidents', icon: AlertTriangle },
         { id: 'settings', label: 'Settings', icon: Settings },
     ];
-
-    // Mock stats for now (since they aren't in the project model yet)
-    const stats = {
-        uptime: '99.99%',
-        errorRate: '0.01%',
-        avgLatency: '45ms',
-        activeUsers: '12.5k'
-    };
 
     return (
         <div className="min-h-screen bg-zinc-950 text-white">
@@ -249,28 +241,28 @@ const ProjectDetailsPage: React.FC = () => {
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                 <StatCard
                                     title="Uptime (30d)"
-                                    value={stats.uptime}
+                                    value={project.uptime || "0%"}
                                     trend="+0.01%"
                                     trendUp={true}
                                     icon={Activity}
                                 />
                                 <StatCard
                                     title="Error Rate"
-                                    value={stats.errorRate}
+                                    value={project.errorRate || "0%"}
                                     trend="-0.05%"
                                     trendUp={true}
                                     icon={AlertTriangle}
                                 />
                                 <StatCard
                                     title="Avg Latency"
-                                    value={stats.avgLatency}
+                                    value={project.avgLatency || "0ms"}
                                     trend="+2ms"
                                     trendUp={false}
                                     icon={Clock}
                                 />
                                 <StatCard
                                     title="Active Users"
-                                    value={stats.activeUsers}
+                                    value={project.activeUsers || "0"}
                                     trend="+12%"
                                     trendUp={true}
                                     icon={LayoutDashboard}
@@ -351,52 +343,35 @@ const ProjectDetailsPage: React.FC = () => {
                             {deployments.length === 0 ? (
                                 <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
                                     <Rocket className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-white">No Deployments</h3>
-                                    <p className="text-zinc-500 mt-2">No deployments found for this project yet.</p>
+                                    <h3 className="text-lg font-medium text-white">No Deployments Yet</h3>
+                                    <p className="text-zinc-500 mt-2">Deployments for this project will appear here.</p>
                                 </div>
                             ) : (
                                 deployments.map((deployment) => (
                                     <Link
                                         key={deployment.id}
                                         to={`/deployments/${deployment.id}`}
-                                        className="block bg-zinc-900/30 border border-zinc-800 rounded-sm p-6 hover:bg-zinc-900/50 transition-colors group"
+                                        className="block bg-zinc-900/30 border border-zinc-800 hover:border-zinc-700 rounded-sm p-4 transition-colors"
                                     >
-                                        <div className="flex items-start justify-between gap-4">
+                                        <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-3 mb-2">
-                                                    <h3 className="font-medium text-white group-hover:text-emerald-400 transition-colors">
-                                                        {deployment.commitMessage}
-                                                    </h3>
-                                                    <span className={clsx("text-xs px-2 py-0.5 rounded-sm uppercase font-mono border",
-                                                        deployment.environment === 'production' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
-                                                            deployment.environment === 'staging' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                                                                "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                                                    )}>
-                                                        {deployment.environment}
+                                                    <span className="font-mono text-white">{deployment.version}</span>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-sm font-mono ${deployment.status === 1
+                                                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                                        : deployment.status === 2
+                                                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                                        }`}>
+                                                        {deployment.status === 1 ? 'Success' : deployment.status === 2 ? 'Failed' : 'Pending'}
                                                     </span>
-                                                    <span className={clsx("text-xs px-2 py-0.5 rounded-sm uppercase font-mono border",
-                                                        deployment.status === 'success' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                                                            deployment.status === 'failed' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
-                                                                "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                                                    )}>
-                                                        {deployment.status}
-                                                    </span>
+                                                    <span className="text-xs text-zinc-500 font-mono">{deployment.environment}</span>
                                                 </div>
-                                                <div className="flex items-center gap-4 text-xs text-zinc-500 font-mono">
-                                                    <span className="flex items-center gap-1.5">
-                                                        <GitCommit className="h-3 w-3" />
-                                                        {deployment.commitHash}
-                                                    </span>
-                                                    <span className="flex items-center gap-1.5">
-                                                        <Clock className="h-3 w-3" />
-                                                        {deployment.timestamp}
-                                                    </span>
-                                                    {deployment.duration && (
-                                                        <span>Duration: {deployment.duration}</span>
-                                                    )}
-                                                </div>
+                                                <p className="text-sm text-zinc-400">{deployment.notes || 'No notes'}</p>
                                             </div>
-                                            <ChevronRight className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                                            <div className="text-right">
+                                                <p className="text-xs text-zinc-500 font-mono">{formatTimeAgo(deployment.deployedAt)}</p>
+                                            </div>
                                         </div>
                                     </Link>
                                 ))
@@ -410,55 +385,56 @@ const ProjectDetailsPage: React.FC = () => {
                                 <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
                                     <AlertTriangle className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
                                     <h3 className="text-lg font-medium text-white">No Incidents</h3>
-                                    <p className="text-zinc-500 mt-2">No incidents found for this project.</p>
+                                    <p className="text-zinc-500 mt-2">Incidents for this project will appear here.</p>
                                 </div>
                             ) : (
-                                incidents.map((incident) => (
-                                    <Link
-                                        key={incident.id}
-                                        to={`/incidents/${incident.id}`}
-                                        className="block bg-zinc-900/30 border border-zinc-800 rounded-sm p-6 hover:bg-zinc-900/50 transition-colors group"
-                                    >
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <h3 className="font-medium text-white group-hover:text-emerald-400 transition-colors">
-                                                        {incident.title}
-                                                    </h3>
-                                                    <span className={clsx("text-xs px-2 py-0.5 rounded-sm uppercase font-mono border",
-                                                        incident.severity === 'critical' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
-                                                            incident.severity === 'high' ? "bg-orange-500/10 text-orange-400 border-orange-500/20" :
-                                                                incident.severity === 'medium' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                                                                    "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
-                                                    )}>
-                                                        {incident.severity}
-                                                    </span>
-                                                    <span className={clsx("text-xs px-2 py-0.5 rounded-sm uppercase font-mono border",
-                                                        incident.status === 'resolved' || incident.status === 'closed' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                                                            incident.status === 'investigating' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                                                                "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
-                                                    )}>
-                                                        {incident.status}
-                                                    </span>
+                                incidents.map((incident) => {
+                                    const getSeverityColor = (severity: number) => {
+                                        switch (severity) {
+                                            case 0: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+                                            case 1: return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                                            case 2: return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+                                            case 3: return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+                                            default: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
+                                        }
+                                    };
+
+                                    const getStatusColor = (status: number) => {
+                                        switch (status) {
+                                            case 0: return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                                            case 1: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+                                            case 2: return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                                            case 3: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
+                                            default: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
+                                        }
+                                    };
+
+                                    return (
+                                        <Link
+                                            key={incident.id}
+                                            to={`/incidents/${incident.id}`}
+                                            className="block bg-zinc-900/30 border border-zinc-800 hover:border-zinc-700 rounded-sm p-4 transition-colors"
+                                        >
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <h4 className="font-medium text-white">{incident.title}</h4>
+                                                        <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono ${getSeverityColor(incident.severity)}`}>
+                                                            {['Low', 'Medium', 'High', 'Critical'][incident.severity]}
+                                                        </span>
+                                                        <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono ${getStatusColor(incident.status)}`}>
+                                                            {['Open', 'Investigating', 'Resolved', 'Closed'][incident.status]}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm text-zinc-400">{incident.description}</p>
                                                 </div>
-                                                <p className="text-sm text-zinc-400 mb-3">{incident.description}</p>
-                                                <div className="flex items-center gap-4 text-xs text-zinc-500 font-mono">
-                                                    <span className="flex items-center gap-1.5">
-                                                        <Clock className="h-3 w-3" />
-                                                        Created {incident.createdAt}
-                                                    </span>
-                                                    {incident.resolvedAt && (
-                                                        <span>Resolved {incident.resolvedAt}</span>
-                                                    )}
-                                                    {incident.assignedTo && (
-                                                        <span>Assigned to {incident.assignedTo}</span>
-                                                    )}
+                                                <div className="text-right">
+                                                    <p className="text-xs text-zinc-500 font-mono">{formatTimeAgo(incident.createdAt)}</p>
                                                 </div>
                                             </div>
-                                            <ChevronRight className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-                                        </div>
-                                    </Link>
-                                ))
+                                        </Link>
+                                    );
+                                })
                             )}
                         </div>
                     )}

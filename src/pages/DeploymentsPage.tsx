@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
+import { formatTimeAgo } from '../utils/dateUtils';
+
 const DeploymentsPage: React.FC = () => {
     const [deployments, setDeployments] = useState<Deployment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -34,12 +36,13 @@ const DeploymentsPage: React.FC = () => {
     }, [refreshKey]);
 
     const loadDeployments = async () => {
-        setIsLoading(true);
         try {
             const data = await getDeployments();
-            setDeployments(data);
+            // Sort by deployedAt descending
+            const sortedData = data.sort((a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime());
+            setDeployments(sortedData);
         } catch (error) {
-            console.error('Failed to load deployments:', error);
+            console.error('Failed to load deployments', error);
         } finally {
             setIsLoading(false);
         }
@@ -58,21 +61,31 @@ const DeploymentsPage: React.FC = () => {
         }
     }, [isStatusDropdownOpen, isEnvDropdownOpen]);
 
+    const getStatusString = (status: number) => {
+        switch (status) {
+            case 1: return 'success';
+            case 2: return 'failed';
+            case 0: return 'building'; // Assuming 0 is pending/building
+            default: return 'queued';
+        }
+    };
+
     const filteredDeployments = deployments.filter(dep => {
-        const matchesSearch = dep.project.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        const statusStr = getStatusString(dep.status);
+        const matchesSearch = dep.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             dep.commitMessage.toLowerCase().includes(searchQuery.toLowerCase()) ||
             dep.author.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = filterStatus === 'all' || dep.status === filterStatus;
-        const matchesEnv = filterEnv === 'all' || dep.environment === filterEnv;
+        const matchesStatus = filterStatus === 'all' || statusStr === filterStatus;
+        const matchesEnv = filterEnv === 'all' || dep.environment.toLowerCase() === filterEnv;
         return matchesSearch && matchesStatus && matchesEnv;
     });
 
-    const getStatusIcon = (status: Deployment['status']) => {
+    const getStatusIcon = (status: number) => {
         switch (status) {
-            case 'success': return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
-            case 'failed': return <XCircle className="h-4 w-4 text-rose-500" />;
-            case 'building': return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
-            case 'queued': return <Clock className="h-4 w-4 text-zinc-500" />;
+            case 1: return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+            case 2: return <XCircle className="h-4 w-4 text-rose-500" />;
+            case 0: return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
+            default: return <Clock className="h-4 w-4 text-zinc-500" />;
         }
     };
 
@@ -225,32 +238,32 @@ const DeploymentsPage: React.FC = () => {
                                             {/* Left: Status & Project Info */}
                                             <div className="flex items-start gap-4">
                                                 <div className={clsx("mt-1 p-2 rounded-full bg-zinc-900 border border-zinc-800",
-                                                    dep.status === 'building' && "animate-pulse"
+                                                    dep.status === 0 && "animate-pulse"
                                                 )}>
                                                     {getStatusIcon(dep.status)}
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <h3 className="text-white font-medium">{dep.project}</h3>
+                                                        <h3 className="text-white font-medium">{dep.projectName}</h3>
                                                         <span className="text-zinc-600 text-xs">•</span>
                                                         <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
-                                                            dep.environment === 'production' ? "bg-purple-500/10 text-purple-400" :
-                                                                dep.environment === 'staging' ? "bg-amber-500/10 text-amber-400" :
+                                                            dep.environment.toLowerCase() === 'production' ? "bg-purple-500/10 text-purple-400" :
+                                                                dep.environment.toLowerCase() === 'staging' ? "bg-amber-500/10 text-amber-400" :
                                                                     "bg-blue-500/10 text-blue-400"
                                                         )}>
                                                             {dep.environment}
                                                         </span>
-                                                    </div>
+                                                    </div >
                                                     <div className="flex items-center gap-2 text-sm text-zinc-400">
                                                         <GitCommit className="h-3 w-3" />
                                                         <span className="font-mono text-zinc-500">{dep.commitHash}</span>
                                                         <span className="text-zinc-300">{dep.commitMessage}</span>
                                                     </div>
-                                                </div>
-                                            </div>
+                                                </div >
+                                            </div >
 
                                             {/* Right: Meta Info */}
-                                            <div className="flex flex-wrap items-center gap-4 md:gap-6 text-sm text-zinc-500 font-mono mt-4 md:mt-0 pl-12 md:pl-0">
+                                            <div className="flex items-center gap-6 text-sm text-zinc-500 font-mono">
                                                 <div className="flex items-center gap-2">
                                                     <div className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-300 uppercase">
                                                         {dep.author.substring(0, 2)}
@@ -259,32 +272,34 @@ const DeploymentsPage: React.FC = () => {
                                                 </div>
                                                 <div className="flex items-center gap-1.5">
                                                     <Clock className="h-3 w-3" />
-                                                    <span>{dep.timestamp}</span>
-                                                </div>
+                                                    <span>{formatTimeAgo(dep.deployedAt)}</span>
+                                                </div >
                                                 <div className="w-20 text-right">
                                                     {dep.duration}
                                                 </div>
                                                 <button className="p-2 hover:bg-zinc-800 rounded-sm text-zinc-500 hover:text-white transition-colors">
                                                     <ExternalLink className="h-4 w-4" />
                                                 </button>
-                                            </div>
+                                            </div >
 
-                                        </div>
-                                    </motion.div>
-                                </Link>
+                                        </div >
+                                    </motion.div >
+                                </Link >
                             ))}
 
-                            {filteredDeployments.length === 0 && (
-                                <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
-                                    <Rocket className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                                    <p className="text-zinc-500 font-mono">NO_DEPLOYMENTS_FOUND</p>
-                                </div>
-                            )}
+                            {
+                                filteredDeployments.length === 0 && (
+                                    <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
+                                        <Rocket className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                                        <p className="text-zinc-500 font-mono">NO_DEPLOYMENTS_FOUND</p>
+                                    </div>
+                                )
+                            }
                         </>
                     )}
-                </div>
+                </div >
 
-            </div>
+            </div >
 
             <TriggerDeploymentModal
                 isOpen={isDeployModalOpen}
@@ -293,7 +308,7 @@ const DeploymentsPage: React.FC = () => {
                     setRefreshKey(prev => prev + 1);
                 }}
             />
-        </div>
+        </div >
     );
 };
 
