@@ -77,7 +77,7 @@ const DeploymentsPage: React.FC = () => {
     };
 
     return (
-        <div className="p-8 bg-zinc-950 min-h-screen text-white">
+        <div className="p-4 md:p-8 bg-zinc-950 min-h-screen text-white">
             <div className="max-w-7xl mx-auto space-y-8">
 
                 {/* Header */}
@@ -103,7 +103,7 @@ const DeploymentsPage: React.FC = () => {
                 </div>
 
                 {/* Toolbar */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between flex-wrap">
                     <div className="relative w-full md:w-96 group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 group-focus-within:text-white transition-colors" />
                         <input
@@ -250,7 +250,7 @@ const DeploymentsPage: React.FC = () => {
                                             </div>
 
                                             {/* Right: Meta Info */}
-                                            <div className="flex items-center gap-6 text-sm text-zinc-500 font-mono">
+                                            <div className="flex flex-wrap items-center gap-4 md:gap-6 text-sm text-zinc-500 font-mono mt-4 md:mt-0 pl-12 md:pl-0">
                                                 <div className="flex items-center gap-2">
                                                     <div className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-300 uppercase">
                                                         {dep.author.substring(0, 2)}

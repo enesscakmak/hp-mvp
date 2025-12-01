@@ -87,7 +87,7 @@ const DeploymentDetailsPage: React.FC = () => {
         <div className="min-h-screen bg-zinc-950 text-white">
             {/* Header */}
             <div className="border-b border-zinc-800 bg-zinc-950/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-8 py-6">
+                <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
                     {/* Breadcrumbs */}
                     <div className="flex items-center gap-2 text-sm font-mono text-zinc-500 mb-4">
                         <Link to="/deployments" className="hover:text-white transition-colors">Deployments</Link>
@@ -97,7 +97,7 @@ const DeploymentDetailsPage: React.FC = () => {
                         <span className="text-white">{deployment.commitHash}</span>
                     </div>
 
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                         <div className="flex items-center gap-4">
                             <div className={clsx("p-3 rounded-sm bg-zinc-900 border border-zinc-800")}>
                                 {getStatusIcon(deployment.status)}
@@ -144,7 +144,7 @@ const DeploymentDetailsPage: React.FC = () => {
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex items-center gap-1 mt-8 -mb-6">
+                    <div className="flex items-center gap-1 mt-8 -mb-6 overflow-x-auto no-scrollbar pb-1">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}
@@ -165,7 +165,7 @@ const DeploymentDetailsPage: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="max-w-7xl mx-auto px-8 py-8">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
                 <motion.div
                     key={activeTab}
                     initial={{ opacity: 0, y: 10 }}

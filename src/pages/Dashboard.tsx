@@ -110,7 +110,7 @@ const Dashboard: React.FC = () => {
     }
 
     return (
-        <div className="p-8 bg-zinc-950 min-h-screen text-white">
+        <div className="p-4 md:p-8 bg-zinc-950 min-h-screen text-white">
             <motion.div
                 variants={container}
                 initial="hidden"

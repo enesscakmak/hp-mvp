@@ -20,7 +20,27 @@ namespace IncidentDashboard.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
         {
-            return await _context.Projects.ToListAsync();
+            var projects = await _context.Projects.ToListAsync();
+            
+            // Get latest deployment for each project
+            var latestDeployments = await _context.Deployments
+                .GroupBy(d => d.ProjectName)
+                .Select(g => new { ProjectName = g.Key, LastDeploy = g.Max(d => d.DeployedAt) })
+                .ToDictionaryAsync(x => x.ProjectName, x => x.LastDeploy);
+
+            foreach (var project in projects)
+            {
+                if (latestDeployments.TryGetValue(project.Name, out var lastDeploy))
+                {
+                    project.LastDeploy = lastDeploy.ToString("O");
+                }
+                else
+                {
+                    project.LastDeploy = "Unknown";
+                }
+            }
+
+            return projects;
         }
 
         // GET: api/Projects/5
@@ -32,6 +52,21 @@ namespace IncidentDashboard.Controllers
             if (project == null)
             {
                 return NotFound();
+            }
+
+            // Get latest deployment for this project
+            var latestDeployment = await _context.Deployments
+                .Where(d => d.ProjectName == project.Name)
+                .OrderByDescending(d => d.DeployedAt)
+                .FirstOrDefaultAsync();
+
+            if (latestDeployment != null)
+            {
+                project.LastDeploy = latestDeployment.DeployedAt.ToString("O");
+            }
+            else
+            {
+                project.LastDeploy = "Unknown";
             }
 
             return project;
