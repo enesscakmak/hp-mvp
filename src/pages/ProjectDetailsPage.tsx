@@ -22,6 +22,7 @@ import { Project } from '../components/ProjectCard';
 import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
 import { getDeployments, Deployment } from '../services/deploymentService';
 import { getIncidents, Incident } from '../services/incidentService';
+import { formatTimeAgo } from '../utils/dateUtils';
 
 const ProjectDetailsPage: React.FC = () => {
     const { projectId } = useParams();
@@ -162,7 +163,7 @@ const ProjectDetailsPage: React.FC = () => {
         <div className="min-h-screen bg-zinc-950 text-white">
             {/* Header */}
             <div className="border-b border-zinc-800 bg-zinc-950/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-8 py-6">
+                <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
                     {/* Breadcrumbs */}
                     <div className="flex items-center gap-2 text-sm font-mono text-zinc-500 mb-4">
                         <Link to="/projects" className="hover:text-white transition-colors">Projects</Link>
@@ -170,7 +171,7 @@ const ProjectDetailsPage: React.FC = () => {
                         <span className="text-white">{project.name}</span>
                     </div>
 
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                         <div className="flex items-center gap-4">
                             <div className="h-12 w-12 rounded-sm bg-zinc-900 border border-zinc-800 flex items-center justify-center">
                                 <span className="text-lg font-bold text-zinc-400 uppercase">{project.name.substring(0, 2)}</span>
@@ -214,7 +215,7 @@ const ProjectDetailsPage: React.FC = () => {
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex items-center gap-1 mt-8 -mb-6">
+                    <div className="flex items-center gap-1 mt-8 -mb-6 overflow-x-auto no-scrollbar pb-1">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}
@@ -235,7 +236,7 @@ const ProjectDetailsPage: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="max-w-7xl mx-auto px-8 py-8">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
                 <motion.div
                     key={activeTab}
                     initial={{ opacity: 0, y: 10 }}
@@ -294,7 +295,7 @@ const ProjectDetailsPage: React.FC = () => {
                                             </div>
                                             <div>
                                                 <p className="text-xs font-mono text-zinc-500 uppercase mb-1">Last Deploy</p>
-                                                <p className="text-white font-mono">{project.lastDeploy}</p>
+                                                <p className="text-white font-mono">{formatTimeAgo(project.lastDeploy)}</p>
                                             </div>
                                         </div>
                                     </div>

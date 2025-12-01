@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MoreHorizontal, GitCommit, Clock, Activity, Rocket, Eye, Settings } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Link, useNavigate } from 'react-router-dom';
+import { formatTimeAgo } from '../utils/dateUtils';
 
 export interface Project {
     id: string;
@@ -191,7 +192,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDeploy }) => {
                     <div className="flex items-center justify-between text-xs font-mono text-zinc-500 pt-3 border-t border-zinc-800/50">
                         <div className="flex items-center gap-1.5">
                             <Clock className="h-3 w-3" />
-                            <span>{project.lastDeploy}</span>
+                            <span>{formatTimeAgo(project.lastDeploy)}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <GitCommit className="h-3 w-3" />

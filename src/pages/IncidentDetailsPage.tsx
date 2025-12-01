@@ -129,7 +129,7 @@ const IncidentDetailsPage: React.FC = () => {
         <div className="min-h-screen bg-zinc-950 text-white">
             {/* Header */}
             <div className="border-b border-zinc-800 bg-zinc-950/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-8 py-6">
+                <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
                     {/* Breadcrumbs */}
                     <div className="flex items-center gap-2 text-sm font-mono text-zinc-500 mb-4">
                         <Link to="/incidents" className="hover:text-white transition-colors">Incidents</Link>
@@ -137,7 +137,7 @@ const IncidentDetailsPage: React.FC = () => {
                         <span className="text-white">{incident.id}</span>
                     </div>
 
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                         <div className="flex items-center gap-4">
                             <div className="p-3 rounded-sm bg-zinc-900 border border-zinc-800">
                                 {getStatusIcon(incident.status)}
@@ -192,7 +192,7 @@ const IncidentDetailsPage: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="max-w-7xl mx-auto px-8 py-8">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-8">

@@ -16,10 +16,10 @@ namespace IncidentDashboard.Data
 
             var projects = new Project[]
             {
-                new Project { Name = "auth-service", Description = "Authentication and Authorization Service", Status = "healthy", Framework = "go", LastDeploy = "2h ago", RepoUrl = "https://github.com/company/auth-service" },
-                new Project { Name = "payment-gateway", Description = "Stripe Integration and Billing", Status = "warning", Framework = "node", LastDeploy = "30m ago", RepoUrl = "https://github.com/company/payment-gateway" },
-                new Project { Name = "frontend-dashboard", Description = "Internal Admin Dashboard", Status = "healthy", Framework = "react", LastDeploy = "5m ago", RepoUrl = "https://github.com/company/frontend-dashboard" },
-                new Project { Name = "data-pipeline", Description = "ETL Jobs and Analytics", Status = "down", Framework = "python", LastDeploy = "1d ago", RepoUrl = "https://github.com/company/data-pipeline" }
+                new Project { Name = "auth-service", Description = "Authentication and Authorization Service", Status = "healthy", Framework = "go", RepoUrl = "https://github.com/company/auth-service" },
+                new Project { Name = "payment-gateway", Description = "Stripe Integration and Billing", Status = "warning", Framework = "node", RepoUrl = "https://github.com/company/payment-gateway" },
+                new Project { Name = "frontend-dashboard", Description = "Internal Admin Dashboard", Status = "healthy", Framework = "react", RepoUrl = "https://github.com/company/frontend-dashboard" },
+                new Project { Name = "data-pipeline", Description = "ETL Jobs and Analytics", Status = "down", Framework = "python", RepoUrl = "https://github.com/company/data-pipeline" }
             };
 
             context.Projects.AddRange(projects);

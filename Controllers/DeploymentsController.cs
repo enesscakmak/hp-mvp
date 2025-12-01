@@ -42,6 +42,15 @@ namespace IncidentDashboard.Controllers
         public async Task<ActionResult<Deployment>> PostDeployment(Deployment deployment)
         {
             _context.Deployments.Add(deployment);
+            
+            // Update the project's LastDeploy time
+            var project = await _context.Projects.FirstOrDefaultAsync(p => p.Name == deployment.ProjectName);
+            if (project != null)
+            {
+                project.LastDeploy = deployment.DeployedAt.ToString("O");
+                _context.Entry(project).State = EntityState.Modified;
+            }
+
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetDeployment), new { id = deployment.Id }, deployment);

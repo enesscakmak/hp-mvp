@@ -13,7 +13,7 @@ namespace IncidentDashboard.Models
 
         public string Status { get; set; } = "healthy"; // healthy, warning, down
 
-        public string LastDeploy { get; set; } = "Never";
+        public string LastDeploy { get; set; } = "Unknown";
 
         public string Framework { get; set; } = "react"; // react, node, python, go
 

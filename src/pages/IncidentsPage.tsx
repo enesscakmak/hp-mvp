@@ -81,7 +81,7 @@ const IncidentsPage: React.FC = () => {
     }
 
     return (
-        <div className="p-8 bg-zinc-950 min-h-screen text-white">
+        <div className="p-4 md:p-8 bg-zinc-950 min-h-screen text-white">
             <div className="max-w-7xl mx-auto space-y-8">
 
                 {/* Header */}
@@ -100,7 +100,7 @@ const IncidentsPage: React.FC = () => {
                 </div>
 
                 {/* Toolbar */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between flex-wrap">
                     <div className="relative w-full md:w-96 group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 group-focus-within:text-white transition-colors" />
                         <input
