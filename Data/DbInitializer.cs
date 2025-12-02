@@ -16,49 +16,85 @@ namespace IncidentDashboard.Data
 
             var projects = new Project[]
             {
-                new Project { 
-                    Name = "auth-service", 
-                    Description = "Authentication and Authorization Service", 
-                    Status = "healthy", 
-                    Framework = "go", 
-                    RepoUrl = "https://github.com/company/auth-service",
-                    Uptime = "99.99%",
+                new Project
+                {
+                    Name = "Hyperion-Core",
+                    Description = "Main backend service for the Hyperion platform. Handles authentication, data processing, and API requests.",
+                    Status = "healthy",
+                    LastDeploy = DateTime.UtcNow.AddHours(-2),
+                    Framework = "node",
+                    Uptime = 99.99,
                     ErrorRate = "0.01%",
                     AvgLatency = "45ms",
-                    ActiveUsers = "12.5k"
+                    ActiveUsers = "1.2k",
+                    RepoUrl = "github.com/acme/hyperion-core",
+                    K8sCluster = "production-us-east-1",
+                    K8sNamespace = "hyperion",
+                    ServiceName = "hyperion-core",
+                    IngressUrl = "api.hyperion.io",
+                    WikiContent = "# Hyperion Core\n\nThis is the main backend service...",
+                    ApiKey = "hp_live_987654321",
+                    WebhookSecret = "whsec_abcdef123456"
                 },
-                new Project { 
-                    Name = "payment-gateway", 
-                    Description = "Stripe Integration and Billing", 
-                    Status = "warning", 
-                    Framework = "node", 
-                    RepoUrl = "https://github.com/company/payment-gateway",
-                    Uptime = "99.90%",
-                    ErrorRate = "0.5%",
+                new Project
+                {
+                    Name = "Nebula-UI",
+                    Description = "Frontend dashboard for customer analytics. Built with React and Tailwind.",
+                    Status = "warning",
+                    LastDeploy = DateTime.UtcNow.AddDays(-1),
+                    Framework = "react",
+                    Uptime = 98.5,
+                    ErrorRate = "2.1%",
                     AvgLatency = "120ms",
-                    ActiveUsers = "8.2k"
+                    ActiveUsers = "850",
+                    RepoUrl = "github.com/acme/nebula-ui",
+                    K8sCluster = "production-us-east-1",
+                    K8sNamespace = "nebula",
+                    ServiceName = "nebula-ui",
+                    IngressUrl = "dashboard.nebula.io",
+                    WikiContent = "# Nebula UI\n\nFrontend dashboard...",
+                    ApiKey = "hp_live_123456789",
+                    WebhookSecret = "whsec_xyz789012"
                 },
-                new Project { 
-                    Name = "frontend-dashboard", 
-                    Description = "Internal Admin Dashboard", 
-                    Status = "healthy", 
-                    Framework = "react", 
-                    RepoUrl = "https://github.com/company/frontend-dashboard",
-                    Uptime = "99.95%",
-                    ErrorRate = "0.02%",
-                    AvgLatency = "25ms",
-                    ActiveUsers = "450"
+                new Project
+                {
+                    Name = "Chronos-Worker",
+                    Description = "Background job processor for scheduled tasks and email notifications.",
+                    Status = "healthy",
+                    LastDeploy = DateTime.UtcNow.AddHours(-12),
+                    Framework = "go",
+                    Uptime = 99.95,
+                    ErrorRate = "0.05%",
+                    AvgLatency = "N/A",
+                    ActiveUsers = "N/A",
+                    RepoUrl = "github.com/acme/chronos-worker",
+                    K8sCluster = "production-us-west-2",
+                    K8sNamespace = "chronos",
+                    ServiceName = "chronos-worker",
+                    IngressUrl = "",
+                    WikiContent = "# Chronos Worker\n\nBackground job processor...",
+                    ApiKey = "hp_live_456123789",
+                    WebhookSecret = "whsec_pqr345678"
                 },
-                new Project { 
-                    Name = "data-pipeline", 
-                    Description = "ETL Jobs and Analytics", 
-                    Status = "down", 
-                    Framework = "python", 
-                    RepoUrl = "https://github.com/company/data-pipeline",
-                    Uptime = "95.00%",
-                    ErrorRate = "5.2%",
-                    AvgLatency = "800ms",
-                    ActiveUsers = "0"
+                new Project
+                {
+                    Name = "Atlas-DB",
+                    Description = "Primary database cluster configuration and monitoring.",
+                    Status = "down",
+                    LastDeploy = DateTime.UtcNow.AddDays(-5),
+                    Framework = "python",
+                    Uptime = 85.0,
+                    ErrorRate = "15%",
+                    AvgLatency = "500ms",
+                    ActiveUsers = "N/A",
+                    RepoUrl = "github.com/acme/atlas-db",
+                    K8sCluster = "production-eu-central-1",
+                    K8sNamespace = "atlas",
+                    ServiceName = "atlas-db-primary",
+                    IngressUrl = "db.atlas.io",
+                    WikiContent = "# Atlas DB\n\nDatabase cluster...",
+                    ApiKey = "hp_live_789456123",
+                    WebhookSecret = "whsec_lmn901234"
                 }
             };
 
@@ -207,6 +243,133 @@ namespace IncidentDashboard.Data
             };
 
             context.ChecklistTemplates.AddRange(checklistTemplates);
+            context.SaveChanges();
+
+            // Seed environment variables
+            var envVars = new EnvironmentVariable[]
+            {
+                new EnvironmentVariable { ProjectId = 1, Key = "NODE_ENV", Value = "production" },
+                new EnvironmentVariable { ProjectId = 1, Key = "DB_HOST", Value = "db.internal" },
+                new EnvironmentVariable { ProjectId = 1, Key = "API_KEY", Value = "sk_live_123456" },
+                new EnvironmentVariable { ProjectId = 2, Key = "STRIPE_KEY", Value = "pk_test_987654" },
+                new EnvironmentVariable { ProjectId = 3, Key = "REACT_APP_API_URL", Value = "https://api.company.com" }
+            };
+
+            context.EnvironmentVariables.AddRange(envVars);
+            context.SaveChanges();
+
+
+
+            // Seed Clusters
+            var clusters = new Cluster[]
+            {
+                new Cluster { Name = "Production US-East", Region = "us-east-1", Description = "Primary production cluster" },
+                new Cluster { Name = "Staging EU-West", Region = "eu-west-1", Description = "Staging environment" },
+                new Cluster { Name = "Dev Cluster", Region = "us-west-2", Description = "Development and testing" }
+            };
+            context.Clusters.AddRange(clusters);
+            context.SaveChanges();
+
+            // Seed Project Resources
+            var resources = new ProjectResource[]
+            {
+                // Shared / Global Resources (assigned to Project 1 for demo, or we could make them global if ProjectId was nullable)
+                // For this MVP, we'll put the Cluster resource in Project 1 so it's visible.
+                new ProjectResource
+                {
+                    ProjectId = 1,
+                    Name = "production-us-east-1",
+                    Type = "Cluster",
+                    Description = "# Production Cluster (US-East-1)\n\nMain EKS cluster for production workloads.\n\n- **Version**: 1.24\n- **Nodes**: 5 x m5.large\n- **VPC**: vpc-0a1b2c3d4e5f6g7h8",
+                    Attributes = new List<ResourceAttribute>
+                    {
+                        new ResourceAttribute { Key = "API Server", Value = "https://A1B2C3D4E5F6.gr7.us-east-1.eks.amazonaws.com" },
+                        new ResourceAttribute { Key = "Region", Value = "us-east-1" },
+                        new ResourceAttribute { Key = "Version", Value = "1.24" },
+                        new ResourceAttribute { Key = "OIDC Issuer", Value = "https://oidc.eks.us-east-1.amazonaws.com/id/A1B2C3D4E5F6" }
+                    }
+                },
+
+                // Project 1: Hyperion-Core
+                new ProjectResource
+                {
+                    ProjectId = 1,
+                    Name = "Kubernetes Config",
+                    Type = "Kubernetes",
+                    Description = "# Kubernetes Cluster\n\nPrimary production cluster hosted on AWS EKS.\n\n## Access\nUse the `aws-iam-authenticator` to connect.\n\n```bash\naws eks update-kubeconfig --name production-us-east-1\n```",
+                    Attributes = new List<ResourceAttribute>
+                    {
+                        new ResourceAttribute { Key = "Cluster", Value = "production-us-east-1" },
+                        new ResourceAttribute { Key = "Namespace", Value = "hyperion" },
+                        new ResourceAttribute { Key = "Service Name", Value = "hyperion-core" },
+                        new ResourceAttribute { Key = "Replicas", Value = "3" }
+                    }
+                },
+                new ProjectResource
+                {
+                    ProjectId = 1,
+                    Name = "Network Config",
+                    Type = "Network",
+                    Description = "# Network Configuration\n\nIngress managed via ALB Controller.\n\n- **Load Balancer**: Application Load Balancer (ALB)\n- **SSL**: ACM Certificate `*.hyperion.io`",
+                    Attributes = new List<ResourceAttribute>
+                    {
+                        new ResourceAttribute { Key = "Ingress URL", Value = "api.hyperion.io" },
+                        new ResourceAttribute { Key = "Load Balancer", Value = "AWS-ALB-PROD-1" },
+                        new ResourceAttribute { Key = "Port", Value = "8080" }
+                    }
+                },
+                new ProjectResource
+                {
+                    ProjectId = 1,
+                    Name = "Primary Database",
+                    Type = "Database",
+                    Description = "# Primary Database\n\nPostgreSQL 14.2 instance.\n\n## Connection\nUse the read-replica for analytics queries.",
+                    Attributes = new List<ResourceAttribute>
+                    {
+                        new ResourceAttribute { Key = "Host", Value = "db-prod.example.com" },
+                        new ResourceAttribute { Key = "Port", Value = "5432" },
+                        new ResourceAttribute { Key = "Version", Value = "14.2" },
+                        new ResourceAttribute { Key = "Type", Value = "PostgreSQL" }
+                    }
+                },
+                new ProjectResource
+                {
+                    ProjectId = 1,
+                    Name = "Redis Cache",
+                    Type = "Redis",
+                    Attributes = new List<ResourceAttribute>
+                    {
+                        new ResourceAttribute { Key = "Host", Value = "redis-prod.example.com" },
+                        new ResourceAttribute { Key = "Port", Value = "6379" }
+                    }
+                },
+
+                // Project 2: Nebula-UI
+                new ProjectResource
+                {
+                    ProjectId = 2,
+                    Name = "Kubernetes Config",
+                    Type = "Kubernetes",
+                    Attributes = new List<ResourceAttribute>
+                    {
+                        new ResourceAttribute { Key = "Cluster", Value = "production-us-east-1" },
+                        new ResourceAttribute { Key = "Namespace", Value = "nebula" },
+                        new ResourceAttribute { Key = "Service Name", Value = "nebula-ui" }
+                    }
+                },
+                new ProjectResource
+                {
+                    ProjectId = 2,
+                    Name = "Network Config",
+                    Type = "Network",
+                    Attributes = new List<ResourceAttribute>
+                    {
+                        new ResourceAttribute { Key = "Ingress URL", Value = "dashboard.nebula.io" },
+                        new ResourceAttribute { Key = "CDN", Value = "CloudFront" }
+                    }
+                }
+            };
+            context.ProjectResources.AddRange(resources);
             context.SaveChanges();
         }
     }

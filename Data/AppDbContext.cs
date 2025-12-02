@@ -15,5 +15,10 @@ namespace IncidentDashboard.Data
         public DbSet<ChecklistTemplate> ChecklistTemplates { get; set; }
         public DbSet<ChecklistRun> ChecklistRuns { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<EnvironmentVariable> EnvironmentVariables { get; set; }
+        // public DbSet<InfrastructureConfig> InfrastructureConfigs { get; set; } // Deprecated
+        public DbSet<Cluster> Clusters { get; set; }
+        public DbSet<ProjectResource> ProjectResources { get; set; }
+        public DbSet<ResourceAttribute> ResourceAttributes { get; set; }
     }
 }

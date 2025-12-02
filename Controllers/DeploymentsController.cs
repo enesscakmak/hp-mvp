@@ -48,7 +48,7 @@ namespace IncidentDashboard.Controllers
             var project = await _context.Projects.FirstOrDefaultAsync(p => p.Name == deployment.ProjectName);
             if (project != null)
             {
-                project.LastDeploy = deployment.DeployedAt.ToString("O");
+                project.LastDeploy = DateTime.UtcNow;
                 _context.Entry(project).State = EntityState.Modified;
             }
 

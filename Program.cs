@@ -50,7 +50,7 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<AppDbContext>();
-    // DbInitializer.Initialize(context); // Commented out to avoid conflicts if needed
+    DbInitializer.Initialize(context);
 }
 
 // Configure the HTTP request pipeline.
