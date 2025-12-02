@@ -8,6 +8,7 @@ namespace IncidentDashboard.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Tags("05. Checklists")]
     public class ChecklistRunsController : ControllerBase
     {
         private readonly AppDbContext _context;

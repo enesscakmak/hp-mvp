@@ -14,5 +14,6 @@ namespace IncidentDashboard.Data
         public DbSet<Project> Projects { get; set; }
         public DbSet<ChecklistTemplate> ChecklistTemplates { get; set; }
         public DbSet<ChecklistRun> ChecklistRuns { get; set; }
+        public DbSet<User> Users { get; set; }
     }
 }

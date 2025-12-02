@@ -7,6 +7,7 @@ namespace IncidentDashboard.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Tags("04. Incidents")]
     public class IncidentsController : ControllerBase
     {
         private readonly AppDbContext _context;
