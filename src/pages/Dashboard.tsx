@@ -4,15 +4,19 @@ import StatCard from '../components/StatCard';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
+import CreateIncidentModal from '../components/CreateIncidentModal';
 import { projectService } from '../services/projectService';
 import { getDeployments } from '../services/deploymentService';
 import { getIncidents } from '../services/incidentService';
+import { activityService, Activity as ActivityType } from '../services/activityService';
 import { formatTimeAgo } from '../utils/dateUtils';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
+    const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [activities, setActivities] = useState<ActivityType[]>([]);
     const [stats, setStats] = useState({
         projects: 0,
         deployments: 0,
@@ -27,10 +31,11 @@ const Dashboard: React.FC = () => {
 
     const loadDashboardData = async () => {
         try {
-            const [projects, deployments, incidents] = await Promise.all([
+            const [projects, deployments, incidents, activityFeed] = await Promise.all([
                 projectService.getProjects(),
                 getDeployments(),
-                getIncidents()
+                getIncidents(),
+                activityService.getActivityFeed()
             ]);
 
             // Calculate stats
@@ -62,10 +67,73 @@ const Dashboard: React.FC = () => {
                 avgLatency,
                 errorRate: parseFloat(avgErrorRate)
             });
+
+            setActivities(activityFeed);
         } catch (error) {
             console.error('Failed to load dashboard data', error);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const getActivityIcon = (type: string) => {
+        switch (type) {
+            case 'deployment':
+                return Rocket;
+            case 'incident':
+                return AlertTriangle;
+            case 'checklist':
+                return CheckSquare;
+            default:
+                return Activity;
+        }
+    };
+
+    const getActivityColor = (type: string) => {
+        switch (type) {
+            case 'deployment':
+                return 'text-blue-400';
+            case 'incident':
+                return 'text-rose-400';
+            case 'checklist':
+                return 'text-emerald-400';
+            default:
+                return 'text-zinc-400';
+        }
+    };
+
+    const getStatusBadge = (activity: ActivityType) => {
+        if (activity.type === 'deployment') {
+            const statusMap: { [key: number]: { label: string; color: string } } = {
+                0: { label: 'Pending', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+                1: { label: 'Running', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+                2: { label: 'Success', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+                3: { label: 'Failed', color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' }
+            };
+            const status = statusMap[activity.status as number] || statusMap[0];
+            return <span className={`px-2 py-0.5 text-xs font-mono border rounded ${status.color}`}>{status.label}</span>;
+        } else if (activity.type === 'incident') {
+            const statusMap: { [key: number]: { label: string; color: string } } = {
+                0: { label: 'Open', color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
+                1: { label: 'In Progress', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+                2: { label: 'Resolved', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+                3: { label: 'Closed', color: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' }
+            };
+            const status = statusMap[activity.status as number] || statusMap[0];
+            return <span className={`px-2 py-0.5 text-xs font-mono border rounded ${status.color}`}>{status.label}</span>;
+        } else if (activity.type === 'checklist') {
+            return <span className="px-2 py-0.5 text-xs font-mono border rounded bg-blue-500/10 text-blue-400 border-blue-500/20">{activity.status}</span>;
+        }
+        return null;
+    };
+
+    const handleActivityClick = (activity: ActivityType) => {
+        if (activity.type === 'deployment') {
+            navigate(`/deployments/${activity.id}`);
+        } else if (activity.type === 'incident') {
+            navigate(`/incidents/${activity.id}`);
+        } else if (activity.type === 'checklist') {
+            navigate(`/checklists/run/${activity.id}`);
         }
     };
 
@@ -161,10 +229,43 @@ const Dashboard: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm overflow-hidden">
-                            <div className="p-4 text-center text-zinc-500 text-sm font-mono">
-                                No recent activity
-                            </div>
+                        <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm overflow-hidden max-h-[500px] overflow-y-auto">
+                            {activities.length === 0 ? (
+                                <div className="p-4 text-center text-zinc-500 text-sm font-mono">
+                                    No recent activity
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-zinc-800">
+                                    {activities.map((activity, index) => {
+                                        const Icon = getActivityIcon(activity.type);
+                                        const iconColor = getActivityColor(activity.type);
+                                        return (
+                                            <div
+                                                key={`${activity.type}-${activity.id}-${index}`}
+                                                onClick={() => handleActivityClick(activity)}
+                                                className="p-4 hover:bg-zinc-900/50 transition-colors cursor-pointer group"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <div className={`p-2 bg-zinc-900 border border-zinc-800 rounded-sm ${iconColor} group-hover:border-zinc-700 transition-colors`}>
+                                                        <Icon className="h-4 w-4" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between gap-2 mb-1">
+                                                            <h3 className="text-sm font-medium text-white truncate">{activity.title}</h3>
+                                                            {getStatusBadge(activity)}
+                                                        </div>
+                                                        <p className="text-xs text-zinc-500 truncate mb-2">{activity.description}</p>
+                                                        <div className="flex items-center gap-2 text-xs text-zinc-600">
+                                                            <Clock className="h-3 w-3" />
+                                                            <span>{formatTimeAgo(activity.timestamp)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </motion.div>
 
@@ -215,7 +316,7 @@ const Dashboard: React.FC = () => {
                                 <span className="text-xs font-mono text-zinc-400 group-hover:text-white block">NEW DEPLOY</span>
                             </button>
                             <button
-                                onClick={() => navigate('/incidents')}
+                                onClick={() => setIsIncidentModalOpen(true)}
                                 className="p-4 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900 transition-all rounded-sm text-left group"
                             >
                                 <AlertTriangle className="h-5 w-5 text-zinc-500 group-hover:text-white mb-2 transition-colors" />
@@ -232,6 +333,14 @@ const Dashboard: React.FC = () => {
                 onClose={() => setIsDeployModalOpen(false)}
                 onSuccess={() => {
                     loadDashboardData(); // Refresh stats after deployment
+                }}
+            />
+
+            <CreateIncidentModal
+                isOpen={isIncidentModalOpen}
+                onClose={() => setIsIncidentModalOpen(false)}
+                onSuccess={() => {
+                    loadDashboardData(); // Refresh stats after incident creation
                 }}
             />
         </div>

@@ -15,11 +15,17 @@ import LoginPage from './pages/LoginPage';
 import MarketingPage from './pages/MarketingPage'
 import NotFoundPage from './pages/NotFoundPage';
 import { AuthProvider, useAuth } from './context/AuthContext'
+import RegisterPage from './pages/RegisterPage';
 
 const queryClient = new QueryClient()
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isLoading } = useAuth();
+
+    if (isLoading) {
+        return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">Loading...</div>;
+    }
+
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
     }
@@ -27,7 +33,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 const AppRoutes = () => {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isLoading } = useAuth();
+
+    if (isLoading) {
+        return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">Loading...</div>;
+    }
 
     return (
         <Routes>
@@ -35,6 +45,7 @@ const AppRoutes = () => {
                 <>
                     <Route path="/" element={<MarketingPage />} />
                     <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </>
             ) : (

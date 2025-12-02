@@ -7,12 +7,14 @@ import {
     Clock,
     CheckCircle2,
     XCircle,
-    Loader2
+    Loader2,
+    Plus
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getIncidents, Incident, getSeverityString, getStatusString } from '../services/incidentService';
 import { formatDateTime } from '../utils/dateUtils';
 import CustomDropdown from '../components/CustomDropdown';
+import CreateIncidentModal from '../components/CreateIncidentModal';
 
 
 
@@ -22,6 +24,7 @@ const IncidentsPage: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'investigating' | 'resolved' | 'closed'>('all');
     const [incidents, setIncidents] = useState<Incident[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     useEffect(() => {
         loadIncidents();
@@ -104,6 +107,13 @@ const IncidentsPage: React.FC = () => {
                         <div className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-mono text-zinc-400">
                             <span className="text-emerald-500">●</span> {filteredIncidents.length} Total Incidents
                         </div>
+                        <button
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-sm font-medium hover:bg-zinc-200 transition-colors"
+                        >
+                            <Plus className="h-4 w-4" />
+                            <span>Report Incident</span>
+                        </button>
                     </div>
                 </div>
 
@@ -214,6 +224,14 @@ const IncidentsPage: React.FC = () => {
                 </div>
 
             </div>
+
+            <CreateIncidentModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={() => {
+                    loadIncidents(); // Refresh incidents after creation
+                }}
+            />
         </div>
     );
 };

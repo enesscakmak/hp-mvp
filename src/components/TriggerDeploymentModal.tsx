@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Rocket, Loader2 } from 'lucide-react';
 import { createDeployment } from '../services/deploymentService';
+import { projectService, Project } from '../services/projectService';
+import { useAuth } from '../context/AuthContext';
 import CustomDropdown from './CustomDropdown';
 import { toast } from 'sonner';
 
@@ -18,20 +20,46 @@ const TriggerDeploymentModal: React.FC<TriggerDeploymentModalProps> = ({
     onSuccess,
     preselectedProject
 }) => {
+    const { user } = useAuth();
     const [formData, setFormData] = useState({
-        project: preselectedProject || 'auth-service',
+        project: preselectedProject || '',
         branch: 'main',
         environment: 'staging' as 'production' | 'staging' | 'preview'
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            loadProjects();
+        }
+    }, [isOpen]);
 
     // Update project when preselectedProject changes
-    React.useEffect(() => {
+    useEffect(() => {
         if (preselectedProject) {
             setFormData(prev => ({ ...prev, project: preselectedProject }));
         }
     }, [preselectedProject]);
+
+    const loadProjects = async () => {
+        setIsLoadingProjects(true);
+        try {
+            const data = await projectService.getProjects();
+            setProjects(data);
+            // If no project is selected and we have projects, select the first one
+            if (!formData.project && !preselectedProject && data.length > 0) {
+                setFormData(prev => ({ ...prev, project: data[0].name }));
+            }
+        } catch (error) {
+            console.error('Failed to load projects', error);
+            toast.error('Failed to load projects');
+        } finally {
+            setIsLoadingProjects(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -39,14 +67,24 @@ const TriggerDeploymentModal: React.FC<TriggerDeploymentModalProps> = ({
         setIsLoading(true);
 
         try {
-            await createDeployment(formData);
+            await createDeployment({
+                projectName: formData.project,
+                branch: formData.branch,
+                environment: formData.environment,
+                version: 'v' + Math.floor(Math.random() * 100) + '.' + Math.floor(Math.random() * 10) + '.' + Math.floor(Math.random() * 10),
+                notes: 'Manual deployment triggered via dashboard',
+                commitHash: Math.random().toString(36).substring(2, 10),
+                commitMessage: 'Manual deployment',
+                author: user?.username || 'Unknown User',
+                duration: '0s'
+            });
             setIsLoading(false);
             toast.success('Deployment triggered successfully');
             onSuccess();
             onClose();
             // Reset form
             setFormData({
-                project: preselectedProject || 'auth-service',
+                project: preselectedProject || '',
                 branch: 'main',
                 environment: 'staging'
             });
@@ -56,6 +94,8 @@ const TriggerDeploymentModal: React.FC<TriggerDeploymentModalProps> = ({
             setIsLoading(false);
         }
     };
+
+    const projectOptions = projects.map(p => ({ value: p.name, label: p.name }));
 
     return (
         <AnimatePresence>
@@ -97,21 +137,16 @@ const TriggerDeploymentModal: React.FC<TriggerDeploymentModalProps> = ({
                                 <form onSubmit={handleSubmit} className="space-y-4 pb-6">
                                     <div>
                                         <label className="block text-sm font-medium text-zinc-400 mb-1">Project</label>
-                                        <CustomDropdown
-                                            value={formData.project}
-                                            onChange={(value) => setFormData({ ...formData, project: value })}
-                                            options={[
-                                                { value: 'auth-service', label: 'auth-service' },
-                                                { value: 'frontend-dashboard', label: 'frontend-dashboard' },
-                                                { value: 'payment-gateway', label: 'payment-gateway' },
-                                                { value: 'data-pipeline', label: 'data-pipeline' },
-                                                // Add the current project if it's not in the list
-                                                ...(preselectedProject && !['auth-service', 'frontend-dashboard', 'payment-gateway', 'data-pipeline'].includes(preselectedProject)
-                                                    ? [{ value: preselectedProject, label: preselectedProject }]
-                                                    : [])
-                                            ]}
-                                            disabled={!!preselectedProject}
-                                        />
+                                        {isLoadingProjects ? (
+                                            <div className="text-sm text-zinc-500">Loading projects...</div>
+                                        ) : (
+                                            <CustomDropdown
+                                                value={formData.project}
+                                                onChange={(value) => setFormData({ ...formData, project: value })}
+                                                options={projectOptions}
+                                                disabled={!!preselectedProject}
+                                            />
+                                        )}
                                     </div>
 
                                     <div>

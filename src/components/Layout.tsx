@@ -84,7 +84,7 @@ const Layout: React.FC = () => {
                             <User className="h-4 w-4 text-zinc-400" />
                         </div>
                         <div className={clsx("flex-1 min-w-0 transition-all duration-300 overflow-hidden", isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100")}>
-                            <p className="text-sm font-medium text-white truncate">{user?.name || 'User'}</p>
+                            <p className="text-sm font-medium text-white truncate">{user?.username || 'User'}</p>
                             <p className="text-xs text-zinc-500 truncate font-mono">{user?.email}</p>
                         </div>
                     </div>

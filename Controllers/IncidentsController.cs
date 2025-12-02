@@ -21,7 +21,9 @@ namespace IncidentDashboard.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Incident>>> GetIncidents()
         {
-            return await _context.Incidents.ToListAsync();
+            return await _context.Incidents
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
         }
 
         // GET: api/Incidents/5

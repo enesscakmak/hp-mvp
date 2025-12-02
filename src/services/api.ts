@@ -2,20 +2,14 @@ const API_BASE_URL = 'http://localhost:5069/api';
 
 export const api = {
     get: async <T>(endpoint: string): Promise<T> => {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`);
-        if (!response.ok) {
-            throw new Error(`API Error: ${response.statusText}`);
+        const token = localStorage.getItem('token');
+        const headers: HeadersInit = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
-        return response.json();
-    },
 
-    post: async <T>(endpoint: string, data: any): Promise<T> => {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
+            headers
         });
         if (!response.ok) {
             throw new Error(`API Error: ${response.statusText}`);
@@ -23,12 +17,45 @@ export const api = {
         return response.json();
     },
 
+    post: async <T>(endpoint: string, data: any): Promise<T> => {
+        const token = localStorage.getItem('token');
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `API Error: ${response.statusText}`);
+        }
+        // Handle non-JSON responses (like simple strings)
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            return response.json();
+        } else {
+            return (await response.text()) as unknown as T;
+        }
+    },
+
     put: async <T>(endpoint: string, data: any): Promise<T> => {
+        const token = localStorage.getItem('token');
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers,
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -42,8 +69,15 @@ export const api = {
     },
 
     delete: async (endpoint: string): Promise<void> => {
+        const token = localStorage.getItem('token');
+        const headers: HeadersInit = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'DELETE',
+            headers
         });
         if (!response.ok) {
             throw new Error(`API Error: ${response.statusText}`);

@@ -1,21 +1,26 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ArrowRight, LayoutDashboard, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('demo@example.com');
-  const [password, setPassword] = useState('password');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login(email);
+      await login({ username, password });
+      toast.success('Logged in successfully');
       navigate('/');
+    } catch (error: any) {
+      console.error('Login failed', error);
+      toast.error(error.response?.data || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -45,18 +50,18 @@ const LoginPage: React.FC = () => {
         <div className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-8 shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-300">
-                Email address
+              <label htmlFor="username" className="block text-sm font-medium text-zinc-300">
+                Username
               </label>
               <div className="mt-2">
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="block w-full rounded-xl border-0 bg-zinc-950/50 py-2.5 text-white shadow-sm ring-1 ring-inset ring-zinc-800 placeholder:text-zinc-600 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6 transition-all duration-200"
                 />
               </div>
@@ -97,8 +102,11 @@ const LoginPage: React.FC = () => {
           </form>
 
           <div className="mt-6 text-center space-y-4">
-            <div className="text-xs text-zinc-500">
-              Use <code className="text-zinc-400">demo@example.com</code> / <code className="text-zinc-400">password</code>
+            <div className="text-sm text-zinc-500">
+              Don't have an account?{' '}
+              <Link to="/register" className="text-white hover:underline">
+                Sign up
+              </Link>
             </div>
             <div>
               <a href="/" className="text-sm text-zinc-400 hover:text-white transition-colors">
