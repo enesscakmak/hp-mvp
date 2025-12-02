@@ -2,34 +2,46 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-    ChevronRight,
     Activity,
-    GitCommit,
     Clock,
+    GitCommit,
+    MoreHorizontal,
     Rocket,
     AlertTriangle,
+    CheckCircle2,
+    XCircle,
+    ArrowLeft,
     Settings,
     LayoutDashboard,
     ExternalLink,
     Github,
+    ChevronRight,
+    Trash2,
     Loader2,
-    Trash2
+    Edit2,
+    Save
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { clsx } from 'clsx';
 import { formatTimeAgo, formatDateTime } from '../utils/dateUtils';
 import StatCard from '../components/StatCard';
-import { projectService } from '../services/projectService';
+import { projectService, Project } from '../services/projectService';
 import { getDeployments, Deployment } from '../services/deploymentService';
 import { getIncidents, Incident, getSeverityString, getStatusString } from '../services/incidentService';
-import { Project } from '../components/ProjectCard';
 import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
+import WikiEditor from '../components/WikiEditor';
+import ReactMarkdown from 'react-markdown';
+
+import EnvVarManager from '../components/EnvVarManager';
+import ResourceManager from '../components/ResourceManager';
 
 
 const ProjectDetailsPage: React.FC = () => {
     const { projectId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const [activeTab, setActiveTab] = useState<'overview' | 'deployments' | 'incidents' | 'settings'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'deployments' | 'incidents' | 'settings' | 'wiki' | 'infrastructure' | 'environment'>('overview');
+    const [isEditingWiki, setIsEditingWiki] = useState(false);
 
     useEffect(() => {
         if (location.state && location.state.activeTab) {
@@ -48,19 +60,25 @@ const ProjectDetailsPage: React.FC = () => {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        repoUrl: ''
+        repoUrl: '',
+        k8sNamespace: '',
+        k8sCluster: '',
+        serviceName: '',
+        ingressUrl: '',
+        wikiContent: ''
     });
 
     useEffect(() => {
         if (projectId) {
-            loadProject(projectId);
+            loadData(projectId);
         }
     }, [projectId]);
 
-    const loadProject = async (id: string) => {
+    const loadData = async (id: string) => {
+        setIsLoading(true);
         try {
             const [projectData, deploymentsData, incidentsData] = await Promise.all([
-                projectService.getProjectById(id),
+                projectService.getProjectById(id), // Fetch specific project
                 getDeployments(),
                 getIncidents()
             ]);
@@ -70,7 +88,14 @@ const ProjectDetailsPage: React.FC = () => {
                 setFormData({
                     name: projectData.name,
                     description: projectData.description,
-                    repoUrl: projectData.repoUrl || ''
+                    repoUrl: projectData.repoUrl || '',
+                    k8sNamespace: projectData.k8sNamespace || '',
+                    k8sCluster: projectData.k8sCluster || '',
+                    serviceName: projectData.serviceName || '',
+                    ingressUrl: projectData.ingressUrl || '',
+                    wikiContent: projectData.wikiContent || '',
+                    apiKey: projectData.apiKey || '',
+                    webhookSecret: projectData.webhookSecret || ''
                 });
 
                 // Filter deployments and incidents for this project
@@ -91,8 +116,8 @@ const ProjectDetailsPage: React.FC = () => {
         }
     };
 
-    const handleUpdate = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSave = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         if (!project) return;
 
         setIsSaving(true);
@@ -146,6 +171,9 @@ const ProjectDetailsPage: React.FC = () => {
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+        { id: 'wiki', label: 'Wiki', icon: Activity }, // Using Activity icon for now, could be FileText
+        { id: 'infrastructure', label: 'Infrastructure', icon: Settings }, // Using Settings icon for now, could be Server
+        { id: 'environment', label: 'Environment', icon: Settings }, // Using Settings icon for now, could be Lock
         { id: 'deployments', label: 'Deployments', icon: Rocket },
         { id: 'incidents', label: 'Incidents', icon: AlertTriangle },
         { id: 'settings', label: 'Settings', icon: Settings },
@@ -338,165 +366,263 @@ const ProjectDetailsPage: React.FC = () => {
                         </div>
                     )}
 
-                    {activeTab === 'deployments' && (
-                        <div className="space-y-4">
-                            {deployments.length === 0 ? (
-                                <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
-                                    <Rocket className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-white">No Deployments Yet</h3>
-                                    <p className="text-zinc-500 mt-2">Deployments for this project will appear here.</p>
-                                </div>
+                    {activeTab === 'wiki' && (
+                        <div className="space-y-6">
+                            {isEditingWiki ? (
+                                <WikiEditor
+                                    initialContent={project.wikiContent || ''}
+                                    onSave={async (content) => {
+                                        try {
+                                            const updatedProject = { ...project, wikiContent: content };
+                                            await projectService.updateProject(project.id, updatedProject);
+                                            setProject(updatedProject);
+                                            setIsEditingWiki(false);
+                                            toast.success('Wiki updated successfully');
+                                        } catch (error) {
+                                            console.error('Failed to update wiki:', error);
+                                            toast.error('Failed to update wiki');
+                                        }
+                                    }}
+                                    onCancel={() => setIsEditingWiki(false)}
+                                />
                             ) : (
-                                deployments.map((deployment) => (
-                                    <Link
-                                        key={deployment.id}
-                                        to={`/deployments/${deployment.id}`}
-                                        className="block bg-zinc-900/30 border border-zinc-800 hover:border-zinc-700 rounded-sm p-4 transition-colors"
-                                    >
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <span className="font-mono text-white">{deployment.version}</span>
-                                                    <span className={`text-xs px-2 py-0.5 rounded-sm font-mono ${deployment.status === 1
-                                                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                                        : deployment.status === 2
-                                                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                                        }`}>
-                                                        {deployment.status === 1 ? 'Success' : deployment.status === 2 ? 'Failed' : 'Pending'}
-                                                    </span>
-                                                    <span className="text-xs text-zinc-500 font-mono">{deployment.environment}</span>
-                                                </div>
-                                                <p className="text-sm text-zinc-400">{deployment.notes || 'No notes'}</p>
+                                <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-8">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-lg font-bold text-white">Project Documentation</h3>
+                                        <button
+                                            onClick={() => setIsEditingWiki(true)}
+                                            className="text-xs font-mono text-zinc-500 hover:text-white transition-colors uppercase tracking-wider flex items-center gap-2"
+                                        >
+                                            <Edit2 className="h-3 w-3" />
+                                            Edit Wiki
+                                        </button>
+                                    </div>
+                                    <div className="prose prose-invert max-w-none">
+                                        {project.wikiContent ? (
+                                            <ReactMarkdown>{project.wikiContent}</ReactMarkdown>
+                                        ) : (
+                                            <div className="text-center py-12 border border-dashed border-zinc-800 rounded-sm">
+                                                <Activity className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                                                <h3 className="text-lg font-medium text-white">No Documentation</h3>
+                                                <p className="text-zinc-500 mt-2 mb-4">This project has no wiki content yet.</p>
+                                                <button
+                                                    onClick={() => setIsEditingWiki(true)}
+                                                    className="px-4 py-2 bg-white text-black font-medium rounded-sm hover:bg-zinc-200 transition-colors"
+                                                >
+                                                    Add Documentation
+                                                </button>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-xs text-zinc-500 font-mono">{formatTimeAgo(deployment.deployedAt)}</p>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                ))
+                                        )}
+                                    </div>
+                                </div>
                             )}
                         </div>
                     )}
 
-                    {activeTab === 'incidents' && (
-                        <div className="space-y-4">
-                            {incidents.length === 0 ? (
-                                <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
-                                    <AlertTriangle className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-white">No Incidents</h3>
-                                    <p className="text-zinc-500 mt-2">Incidents for this project will appear here.</p>
-                                </div>
-                            ) : (
-                                incidents.map((incident) => {
-                                    const getSeverityColor = (severity: number) => {
-                                        switch (severity) {
-                                            case 0: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-                                            case 1: return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-                                            case 2: return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
-                                            case 3: return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-                                            default: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
-                                        }
-                                    };
+                    {activeTab === 'infrastructure' && (
+                        <div className="space-y-6">
+                            <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-6">
+                                <ResourceManager projectId={project.id} />
+                            </div>
+                        </div>
+                    )}
 
-                                    const getStatusColor = (status: number) => {
-                                        switch (status) {
-                                            case 0: return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-                                            case 1: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-                                            case 2: return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-                                            case 3: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
-                                            default: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
-                                        }
-                                    };
+                    {activeTab === 'environment' && (
+                        <EnvVarManager projectId={project.id} />
+                    )
+                    }
 
-                                    return (
+                    {
+                        activeTab === 'deployments' && (
+                            <div className="space-y-4">
+                                {deployments.length === 0 ? (
+                                    <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
+                                        <Rocket className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                                        <h3 className="text-lg font-medium text-white">No Deployments Yet</h3>
+                                        <p className="text-zinc-500 mt-2">Deployments for this project will appear here.</p>
+                                    </div>
+                                ) : (
+                                    deployments.map((deployment) => (
                                         <Link
-                                            key={incident.id}
-                                            to={`/incidents/${incident.id}`}
+                                            key={deployment.id}
+                                            to={`/deployments/${deployment.id}`}
                                             className="block bg-zinc-900/30 border border-zinc-800 hover:border-zinc-700 rounded-sm p-4 transition-colors"
                                         >
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-3 mb-2">
-                                                        <h4 className="font-medium text-white">{incident.title}</h4>
-                                                        <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono capitalize ${getSeverityColor(incident.severity)}`}>
-                                                            {getSeverityString(incident.severity)}
+                                                        <span className="font-mono text-white">{deployment.version}</span>
+                                                        <span className={`text-xs px-2 py-0.5 rounded-sm font-mono ${deployment.status === 1
+                                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                                            : deployment.status === 2
+                                                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                                            }`}>
+                                                            {deployment.status === 1 ? 'Success' : deployment.status === 2 ? 'Failed' : 'Pending'}
                                                         </span>
-                                                        <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono capitalize ${getStatusColor(incident.status)}`}>
-                                                            {getStatusString(incident.status)}
-                                                        </span>
+                                                        <span className="text-xs text-zinc-500 font-mono">{deployment.environment}</span>
                                                     </div>
-                                                    <p className="text-sm text-zinc-400">{incident.description}</p>
+                                                    <p className="text-sm text-zinc-400">{deployment.notes || 'No notes'}</p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-xs text-zinc-500 font-mono">{formatTimeAgo(incident.createdAt)}</p>
+                                                    <p className="text-xs text-zinc-500 font-mono">{formatTimeAgo(deployment.deployedAt)}</p>
                                                 </div>
                                             </div>
                                         </Link>
-                                    );
-                                })
-                            )}
-                        </div>
-                    )}
-
-                    {activeTab === 'settings' && (
-                        <div className="max-w-2xl">
-                            <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-8">
-                                <h3 className="text-lg font-bold text-white mb-6">Project Settings</h3>
-                                <form onSubmit={handleUpdate} className="space-y-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-zinc-400 mb-2">Project Name</label>
-                                        <input
-                                            type="text"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-zinc-400 mb-2">Description</label>
-                                        <textarea
-                                            rows={3}
-                                            value={formData.description}
-                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-zinc-400 mb-2">Repository URL</label>
-                                        <input
-                                            type="text"
-                                            value={formData.repoUrl}
-                                            onChange={(e) => setFormData({ ...formData, repoUrl: e.target.value })}
-                                            placeholder="github.com/org/repo"
-                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
-                                        />
-                                    </div>
-                                    <div className="pt-4 border-t border-zinc-800 flex justify-between items-center">
-                                        <button
-                                            type="button"
-                                            onClick={handleDelete}
-                                            disabled={isDeleting}
-                                            className="px-4 py-2 bg-rose-500/10 text-rose-400 font-medium rounded-sm hover:bg-rose-500/20 transition-colors flex items-center gap-2"
-                                        >
-                                            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                                            Delete Project
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            disabled={isSaving}
-                                            className="px-4 py-2 bg-white text-black font-medium rounded-sm hover:bg-zinc-200 transition-colors flex items-center gap-2"
-                                        >
-                                            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                                            Save Changes
-                                        </button>
-                                    </div>
-                                </form>
+                                    ))
+                                )}
                             </div>
-                        </div>
-                    )}
-                </motion.div>
-            </div>
+                        )
+                    }
+
+                    {
+                        activeTab === 'incidents' && (
+                            <div className="space-y-4">
+                                {incidents.length === 0 ? (
+                                    <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
+                                        <AlertTriangle className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                                        <h3 className="text-lg font-medium text-white">No Incidents</h3>
+                                        <p className="text-zinc-500 mt-2">Incidents for this project will appear here.</p>
+                                    </div>
+                                ) : (
+                                    incidents.map((incident) => {
+                                        const getSeverityColor = (severity: number) => {
+                                            switch (severity) {
+                                                case 0: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+                                                case 1: return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                                                case 2: return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+                                                case 3: return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+                                                default: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
+                                            }
+                                        };
+
+                                        const getStatusColor = (status: number) => {
+                                            switch (status) {
+                                                case 0: return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                                                case 1: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+                                                case 2: return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                                                case 3: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
+                                                default: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
+                                            }
+                                        };
+
+                                        return (
+                                            <Link
+                                                key={incident.id}
+                                                to={`/incidents/${incident.id}`}
+                                                className="block bg-zinc-900/30 border border-zinc-800 hover:border-zinc-700 rounded-sm p-4 transition-colors"
+                                            >
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <h4 className="font-medium text-white">{incident.title}</h4>
+                                                            <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono capitalize ${getSeverityColor(incident.severity)}`}>
+                                                                {getSeverityString(incident.severity)}
+                                                            </span>
+                                                            <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono capitalize ${getStatusColor(incident.status)}`}>
+                                                                {getStatusString(incident.status)}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-zinc-400">{incident.description}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-xs text-zinc-500 font-mono">{formatTimeAgo(incident.createdAt)}</p>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        )
+                    }
+
+                    {
+                        activeTab === 'settings' && (
+                            <div className="max-w-2xl">
+                                <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-8">
+                                    <h3 className="text-lg font-bold text-white mb-6">Project Settings</h3>
+                                    <form onSubmit={handleSave} className="space-y-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-zinc-400 mb-2">Project Name</label>
+                                            <input
+                                                type="text"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-zinc-400 mb-2">Description</label>
+                                            <textarea
+                                                rows={3}
+                                                value={formData.description}
+                                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                                className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-zinc-400 mb-2">Repository URL</label>
+                                            <input
+                                                type="text"
+                                                value={formData.repoUrl}
+                                                onChange={(e) => setFormData({ ...formData, repoUrl: e.target.value })}
+                                                placeholder="github.com/org/repo"
+                                                className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
+                                            />
+                                        </div>
+
+
+
+                                        <div className="pt-6 border-t border-zinc-800">
+                                            <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider font-mono">Secrets & Keys</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-zinc-400 mb-2">API Key</label>
+                                                    <input
+                                                        type="password"
+                                                        value={formData.apiKey}
+                                                        onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-zinc-400 mb-2">Webhook Secret</label>
+                                                    <input
+                                                        type="password"
+                                                        value={formData.webhookSecret}
+                                                        onChange={(e) => setFormData({ ...formData, webhookSecret: e.target.value })}
+                                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="pt-4 border-t border-zinc-800 flex justify-between items-center">
+                                            <button
+                                                type="button"
+                                                onClick={handleDelete}
+                                                disabled={isDeleting}
+                                                className="px-4 py-2 bg-rose-500/10 text-rose-400 font-medium rounded-sm hover:bg-rose-500/20 transition-colors flex items-center gap-2"
+                                            >
+                                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                                Delete Project
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={isSaving}
+                                                className="px-4 py-2 bg-white text-black font-medium rounded-sm hover:bg-zinc-200 transition-colors flex items-center gap-2"
+                                            >
+                                                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                                                Save Changes
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )
+                    }
+                </motion.div >
+            </div >
 
             <TriggerDeploymentModal
                 isOpen={isDeployModalOpen}
@@ -507,7 +633,7 @@ const ProjectDetailsPage: React.FC = () => {
                 }}
                 preselectedProject={project?.name}
             />
-        </div>
+        </div >
     );
 };
 

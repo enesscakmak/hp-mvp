@@ -14,6 +14,19 @@ export interface Project {
   errorRate?: string;
   avgLatency?: string;
   activeUsers?: string;
+
+  // Infrastructure Info
+  k8sNamespace?: string;
+  k8sCluster?: string;
+  serviceName?: string;
+  ingressUrl?: string;
+
+  // Wiki & Documentation
+  wikiContent?: string;
+
+  // Secrets & Config
+  apiKey?: string;
+  webhookSecret?: string;
 }
 
 export const projectService = {

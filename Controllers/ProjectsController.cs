@@ -31,9 +31,7 @@ namespace IncidentDashboard.Controllers
                     .OrderByDescending(d => d.DeployedAt)
                     .FirstOrDefaultAsync();
                 
-                project.LastDeploy = latestDeployment != null 
-                    ? latestDeployment.DeployedAt.ToString("o") 
-                    : "Unknown";
+                project.LastDeploy = latestDeployment?.DeployedAt ?? DateTime.UtcNow;
             }
             
             return projects;
@@ -56,9 +54,7 @@ namespace IncidentDashboard.Controllers
                 .OrderByDescending(d => d.DeployedAt)
                 .FirstOrDefaultAsync();
             
-            project.LastDeploy = latestDeployment != null 
-                ? latestDeployment.DeployedAt.ToString("o") 
-                : "Unknown";
+            project.LastDeploy = latestDeployment?.DeployedAt ?? DateTime.UtcNow;
 
             return project;
         }
@@ -67,6 +63,7 @@ namespace IncidentDashboard.Controllers
         [HttpPost]
         public async Task<ActionResult<Project>> PostProject(Project project)
         {
+            project.LastDeploy = DateTime.UtcNow;
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
