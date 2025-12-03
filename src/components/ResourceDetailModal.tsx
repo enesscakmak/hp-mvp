@@ -28,15 +28,25 @@ const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({ initialResour
     const [newAttrValue, setNewAttrValue] = useState('');
     const [copiedId, setCopiedId] = useState<number | null>(null);
 
-    // Initialize with the clicked resource
+    // Initialize with the clicked resource ONLY ONCE (or when it changes and we have nothing open)
     useEffect(() => {
-        if (isOpen && initialResource) {
+        if (isOpen && initialResource && openResources.length === 0) {
             setOpenResources([initialResource]);
             setActiveResourceId(initialResource.id);
             setActiveTab('wiki');
             setIsEditingWiki(false);
         }
-    }, [isOpen, initialResource]);
+    }, [isOpen, initialResource]); // We rely on openResources.length check to prevent reset
+
+    // Sync open resources with latest data from parent
+    useEffect(() => {
+        if (allResources.length > 0 && openResources.length > 0) {
+            setOpenResources(prev => prev.map(opened => {
+                const updated = allResources.find(latest => latest.id === opened.id);
+                return updated || opened;
+            }));
+        }
+    }, [allResources]);
 
     // Get the currently active resource object
     const activeResource = openResources.find(r => r.id === activeResourceId) || initialResource;

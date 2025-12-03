@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
-import { getDeployments, Deployment } from '../services/deploymentService';
+import { getDeployments, Deployment, rollback } from '../services/deploymentService';
 import {
     Rocket,
     Search,
@@ -14,9 +14,12 @@ import {
     ExternalLink,
     Loader2,
     ChevronDown,
-    AlertTriangle
+    AlertTriangle,
+    MoreVertical,
+    RotateCcw
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { toast } from 'sonner';
 
 import { formatTimeAgo } from '../utils/dateUtils';
 
@@ -26,8 +29,10 @@ const DeploymentsPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'success' | 'failed' | 'building'>('all');
     const [filterEnv, setFilterEnv] = useState<'all' | 'production' | 'staging' | 'preview'>('all');
+    const [filterBranch, setFilterBranch] = useState<string>('all');
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [isEnvDropdownOpen, setIsEnvDropdownOpen] = useState(false);
+    const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
     const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
 
@@ -53,13 +58,14 @@ const DeploymentsPage: React.FC = () => {
         const handleClickOutside = () => {
             setIsStatusDropdownOpen(false);
             setIsEnvDropdownOpen(false);
+            setIsBranchDropdownOpen(false);
         };
 
-        if (isStatusDropdownOpen || isEnvDropdownOpen) {
+        if (isStatusDropdownOpen || isEnvDropdownOpen || isBranchDropdownOpen) {
             document.addEventListener('click', handleClickOutside);
             return () => document.removeEventListener('click', handleClickOutside);
         }
-    }, [isStatusDropdownOpen, isEnvDropdownOpen]);
+    }, [isStatusDropdownOpen, isEnvDropdownOpen, isBranchDropdownOpen]);
 
     const getStatusString = (status: number) => {
         switch (status) {
@@ -70,6 +76,8 @@ const DeploymentsPage: React.FC = () => {
         }
     };
 
+    const uniqueBranches = Array.from(new Set(deployments.map(d => d.branch))).filter(Boolean);
+
     const filteredDeployments = deployments.filter(dep => {
         const statusStr = getStatusString(dep.status);
         const matchesSearch = dep.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -77,7 +85,8 @@ const DeploymentsPage: React.FC = () => {
             dep.author.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = filterStatus === 'all' || statusStr === filterStatus;
         const matchesEnv = filterEnv === 'all' || dep.environment.toLowerCase() === filterEnv;
-        return matchesSearch && matchesStatus && matchesEnv;
+        const matchesBranch = filterBranch === 'all' || dep.branch === filterBranch;
+        return matchesSearch && matchesStatus && matchesEnv && matchesBranch;
     });
 
     const getStatusIcon = (status: number) => {
@@ -136,6 +145,7 @@ const DeploymentsPage: React.FC = () => {
                                     e.stopPropagation();
                                     setIsStatusDropdownOpen(!isStatusDropdownOpen);
                                     setIsEnvDropdownOpen(false);
+                                    setIsBranchDropdownOpen(false);
                                 }}
                                 className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 rounded-sm py-2 pl-3 pr-4 text-sm text-zinc-400 hover:text-white hover:border-zinc-700 transition-all min-w-[140px] justify-between"
                             >
@@ -179,6 +189,7 @@ const DeploymentsPage: React.FC = () => {
                                     e.stopPropagation();
                                     setIsEnvDropdownOpen(!isEnvDropdownOpen);
                                     setIsStatusDropdownOpen(false);
+                                    setIsBranchDropdownOpen(false);
                                 }}
                                 className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 rounded-sm py-2 pl-3 pr-4 text-sm text-zinc-400 hover:text-white hover:border-zinc-700 transition-all min-w-[160px] justify-between"
                             >
@@ -208,6 +219,62 @@ const DeploymentsPage: React.FC = () => {
                                                 )}
                                             >
                                                 <span className="capitalize">{env === 'all' ? 'All Environments' : env}</span>
+                                            </button>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
+                        {/* Branch Filter Dropdown */}
+                        <div className="relative">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsBranchDropdownOpen(!isBranchDropdownOpen);
+                                    setIsStatusDropdownOpen(false);
+                                    setIsEnvDropdownOpen(false);
+                                }}
+                                className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 rounded-sm py-2 pl-3 pr-4 text-sm text-zinc-400 hover:text-white hover:border-zinc-700 transition-all min-w-[160px] justify-between"
+                            >
+                                <span className="truncate max-w-[120px]">{filterBranch === 'all' ? 'All Branches' : filterBranch}</span>
+                                <ChevronDown className={clsx("h-4 w-4 transition-transform", isBranchDropdownOpen && "rotate-180")} />
+                            </button>
+
+                            <AnimatePresence>
+                                {isBranchDropdownOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 5 }}
+                                        transition={{ duration: 0.1 }}
+                                        className="absolute right-0 top-full mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-sm shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto"
+                                    >
+                                        <button
+                                            onClick={() => {
+                                                setFilterBranch('all');
+                                                setIsBranchDropdownOpen(false);
+                                            }}
+                                            className={clsx(
+                                                "w-full text-left px-3 py-2 text-sm transition-colors",
+                                                filterBranch === 'all' ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                                            )}
+                                        >
+                                            All Branches
+                                        </button>
+                                        {uniqueBranches.map((branch) => (
+                                            <button
+                                                key={branch}
+                                                onClick={() => {
+                                                    setFilterBranch(branch);
+                                                    setIsBranchDropdownOpen(false);
+                                                }}
+                                                className={clsx(
+                                                    "w-full text-left px-3 py-2 text-sm transition-colors truncate",
+                                                    filterBranch === branch ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                                                )}
+                                            >
+                                                {branch}
                                             </button>
                                         ))}
                                     </motion.div>
@@ -253,6 +320,15 @@ const DeploymentsPage: React.FC = () => {
                                                         )}>
                                                             {dep.environment}
                                                         </span>
+                                                        {dep.branch && (
+                                                            <>
+                                                                <span className="text-zinc-600 text-xs">•</span>
+                                                                <span className="text-xs text-zinc-400 font-mono flex items-center gap-1">
+                                                                    <GitCommit className="h-3 w-3" />
+                                                                    {dep.branch}
+                                                                </span>
+                                                            </>
+                                                        )}
                                                     </div >
                                                     <div className="flex items-center gap-2 text-sm text-zinc-400">
                                                         <GitCommit className="h-3 w-3" />
@@ -277,9 +353,52 @@ const DeploymentsPage: React.FC = () => {
                                                 <div className="w-20 text-right">
                                                     {dep.duration}
                                                 </div>
-                                                <button className="p-2 hover:bg-zinc-800 rounded-sm text-zinc-500 hover:text-white transition-colors">
-                                                    <ExternalLink className="h-4 w-4" />
-                                                </button>
+
+                                                {/* Actions Menu */}
+                                                <div className="relative group/menu">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            // We handle the click in the parent Link, but we want to open menu here
+                                                            // Actually, since the whole card is a link, we need to stop propagation
+                                                            e.stopPropagation();
+                                                        }}
+                                                        className="p-2 hover:bg-zinc-800 rounded-sm text-zinc-500 hover:text-white transition-colors"
+                                                    >
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </button>
+
+                                                    {/* Dropdown - appearing on hover of the button wrapper for simplicity, or we could use state */}
+                                                    <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-sm shadow-xl opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all z-10">
+                                                        <button
+                                                            onClick={async (e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                if (!confirm(`Are you sure you want to rollback to version ${dep.version}?`)) return;
+
+                                                                try {
+                                                                    await rollback(dep.id);
+                                                                    toast.success('Rollback started successfully');
+                                                                    setRefreshKey(prev => prev + 1);
+                                                                } catch (error) {
+                                                                    console.error('Rollback failed:', error);
+                                                                    toast.error('Failed to start rollback');
+                                                                }
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white flex items-center gap-2"
+                                                        >
+                                                            <RotateCcw className="h-4 w-4" />
+                                                            Rollback to this
+                                                        </button>
+                                                        <Link
+                                                            to={`/deployments/${dep.id}`}
+                                                            className="w-full text-left px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white flex items-center gap-2"
+                                                        >
+                                                            <ExternalLink className="h-4 w-4" />
+                                                            View Details
+                                                        </Link>
+                                                    </div>
+                                                </div>
                                             </div >
 
                                         </div >

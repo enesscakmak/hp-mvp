@@ -53,3 +53,25 @@ export const createDeployment = async (deployment: Omit<Deployment, 'id' | 'depl
     }
     return response.json();
 };
+
+export const rollback = async (id: number): Promise<Deployment> => {
+    // 1. Get the target deployment to rollback to
+    const targetDeployment = await getDeploymentById(id.toString());
+    if (!targetDeployment) {
+        throw new Error('Target deployment not found');
+    }
+
+    // 2. Create a new deployment based on the target
+    // We append "(Rollback)" to the commit message to indicate it's a rollback
+    return await createDeployment({
+        projectName: targetDeployment.projectName,
+        version: targetDeployment.version,
+        environment: targetDeployment.environment,
+        notes: `Rollback to version ${targetDeployment.version}`,
+        commitHash: targetDeployment.commitHash,
+        commitMessage: `[Rollback] ${targetDeployment.commitMessage}`,
+        author: targetDeployment.author, // Or current user if we had auth context
+        duration: '0s', // Reset duration
+        branch: targetDeployment.branch
+    });
+};
