@@ -1,36 +1,34 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using IncidentDashboard.Data;
-using IncidentDashboard.Models;
+using IncidentDashboard.DTOs;
+using IncidentDashboard.Services.Interfaces;
 
 namespace IncidentDashboard.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Tags("04. Incidents")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
     public class IncidentsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IIncidentService _incidentService;
 
-        public IncidentsController(AppDbContext context)
+        public IncidentsController(IIncidentService incidentService)
         {
-            _context = context;
+            _incidentService = incidentService;
         }
 
         // GET: api/Incidents
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Incident>>> GetIncidents()
+        public async Task<ActionResult<PagedResult<IncidentDto>>> GetIncidents([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] int? deploymentId = null, [FromQuery] int? projectId = null)
         {
-            return await _context.Incidents
-                .OrderByDescending(i => i.CreatedAt)
-                .ToListAsync();
+            return await _incidentService.GetIncidentsAsync(page, pageSize, deploymentId, projectId);
         }
 
         // GET: api/Incidents/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Incident>> GetIncident(int id)
+        public async Task<ActionResult<IncidentDto>> GetIncident(int id)
         {
-            var incident = await _context.Incidents.FindAsync(id);
+            var incident = await _incidentService.GetIncidentByIdAsync(id);
 
             if (incident == null)
             {
@@ -42,39 +40,20 @@ namespace IncidentDashboard.Controllers
 
         // POST: api/Incidents
         [HttpPost]
-        public async Task<ActionResult<Incident>> PostIncident(Incident incident)
+        public async Task<ActionResult<IncidentDto>> PostIncident(CreateIncidentDto incidentDto)
         {
-            _context.Incidents.Add(incident);
-            await _context.SaveChangesAsync();
-
+            var incident = await _incidentService.CreateIncidentAsync(incidentDto);
             return CreatedAtAction(nameof(GetIncident), new { id = incident.Id }, incident);
         }
 
         // PUT: api/Incidents/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutIncident(int id, Incident incident)
+        public async Task<IActionResult> PutIncident(int id, UpdateIncidentDto incidentDto)
         {
-            if (id != incident.Id)
+            var result = await _incidentService.UpdateIncidentAsync(id, incidentDto);
+            if (!result)
             {
-                return BadRequest();
-            }
-
-            _context.Entry(incident).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!IncidentExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound();
             }
 
             return NoContent();
@@ -84,21 +63,13 @@ namespace IncidentDashboard.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteIncident(int id)
         {
-            var incident = await _context.Incidents.FindAsync(id);
-            if (incident == null)
+            var result = await _incidentService.DeleteIncidentAsync(id);
+            if (!result)
             {
                 return NotFound();
             }
 
-            _context.Incidents.Remove(incident);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool IncidentExists(int id)
-        {
-            return _context.Incidents.Any(e => e.Id == id);
         }
     }
 }

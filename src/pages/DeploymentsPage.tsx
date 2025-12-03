@@ -1,27 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
-import { getDeployments, Deployment, rollback } from '../services/deploymentService';
-import {
-    Rocket,
-    Search,
-    Filter,
-    CheckCircle2,
-    XCircle,
-    Clock,
-    GitCommit,
-    ExternalLink,
-    Loader2,
-    ChevronDown,
-    AlertTriangle,
-    MoreVertical,
-    RotateCcw
-} from 'lucide-react';
-import { clsx } from 'clsx';
-import { toast } from 'sonner';
-
-import { formatTimeAgo } from '../utils/dateUtils';
+import { Rocket } from 'lucide-react';
+import TriggerDeploymentModal from '../features/deployments/components/TriggerDeploymentModal';
+import Button from '../components/ui/Button';
+import DeploymentFilters from '../features/deployments/components/DeploymentFilters';
+import DeploymentList from '../features/deployments/components/DeploymentList';
+import { getDeployments, Deployment } from '../services/deploymentService';
 
 const DeploymentsPage: React.FC = () => {
     const [deployments, setDeployments] = useState<Deployment[]>([]);
@@ -30,9 +13,6 @@ const DeploymentsPage: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<'all' | 'success' | 'failed' | 'building'>('all');
     const [filterEnv, setFilterEnv] = useState<'all' | 'production' | 'staging' | 'preview'>('all');
     const [filterBranch, setFilterBranch] = useState<string>('all');
-    const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
-    const [isEnvDropdownOpen, setIsEnvDropdownOpen] = useState(false);
-    const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
     const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
 
@@ -44,7 +24,7 @@ const DeploymentsPage: React.FC = () => {
         try {
             const data = await getDeployments();
             // Sort by deployedAt descending
-            const sortedData = data.sort((a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime());
+            const sortedData = data.items.sort((a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime());
             setDeployments(sortedData);
         } catch (error) {
             console.error('Failed to load deployments', error);
@@ -52,20 +32,6 @@ const DeploymentsPage: React.FC = () => {
             setIsLoading(false);
         }
     };
-
-    // Close dropdowns when clicking outside
-    React.useEffect(() => {
-        const handleClickOutside = () => {
-            setIsStatusDropdownOpen(false);
-            setIsEnvDropdownOpen(false);
-            setIsBranchDropdownOpen(false);
-        };
-
-        if (isStatusDropdownOpen || isEnvDropdownOpen || isBranchDropdownOpen) {
-            document.addEventListener('click', handleClickOutside);
-            return () => document.removeEventListener('click', handleClickOutside);
-        }
-    }, [isStatusDropdownOpen, isEnvDropdownOpen, isBranchDropdownOpen]);
 
     const getStatusString = (status: number) => {
         switch (status) {
@@ -89,15 +55,6 @@ const DeploymentsPage: React.FC = () => {
         return matchesSearch && matchesStatus && matchesEnv && matchesBranch;
     });
 
-    const getStatusIcon = (status: number) => {
-        switch (status) {
-            case 1: return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
-            case 2: return <XCircle className="h-4 w-4 text-rose-500" />;
-            case 0: return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
-            default: return <Clock className="h-4 w-4 text-zinc-500" />;
-        }
-    };
-
     return (
         <div className="p-4 md:p-8 bg-zinc-950 min-h-screen text-white">
             <div className="max-w-7xl mx-auto space-y-8">
@@ -114,311 +71,38 @@ const DeploymentsPage: React.FC = () => {
                         <div className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-mono text-zinc-400">
                             <span className="text-emerald-500">●</span> Live System Status: Normal
                         </div>
-                        <button
+                        <Button
+                            variant="primary"
+                            size="md"
                             onClick={() => setIsDeployModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-sm hover:bg-blue-700 transition-colors"
+                            leftIcon={<Rocket className="h-4 w-4" />}
                         >
-                            <Rocket className="h-4 w-4" />
-                            <span>New Deployment</span>
-                        </button>
+                            New Deployment
+                        </Button>
                     </div>
                 </div>
 
-                {/* Toolbar */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between flex-wrap">
-                    <div className="relative w-full md:w-96 group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 group-focus-within:text-white transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Search deployments, commits, authors..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-zinc-900/50 border border-zinc-800 rounded-sm py-2 pl-10 pr-4 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
-                        />
-                    </div>
-
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                        {/* Status Filter Dropdown */}
-                        <div className="relative">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsStatusDropdownOpen(!isStatusDropdownOpen);
-                                    setIsEnvDropdownOpen(false);
-                                    setIsBranchDropdownOpen(false);
-                                }}
-                                className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 rounded-sm py-2 pl-3 pr-4 text-sm text-zinc-400 hover:text-white hover:border-zinc-700 transition-all min-w-[140px] justify-between"
-                            >
-                                <span className="capitalize">{filterStatus === 'all' ? 'All Status' : filterStatus}</span>
-                                <ChevronDown className={clsx("h-4 w-4 transition-transform", isStatusDropdownOpen && "rotate-180")} />
-                            </button>
-
-                            <AnimatePresence>
-                                {isStatusDropdownOpen && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 5 }}
-                                        transition={{ duration: 0.1 }}
-                                        className="absolute right-0 top-full mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-sm shadow-xl z-50 overflow-hidden"
-                                    >
-                                        {['all', 'success', 'failed', 'building'].map((status) => (
-                                            <button
-                                                key={status}
-                                                onClick={() => {
-                                                    setFilterStatus(status as any);
-                                                    setIsStatusDropdownOpen(false);
-                                                }}
-                                                className={clsx(
-                                                    "w-full text-left px-3 py-2 text-sm transition-colors",
-                                                    filterStatus === status ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
-                                                )}
-                                            >
-                                                <span className="capitalize">{status === 'all' ? 'All Status' : status}</span>
-                                            </button>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-
-                        {/* Environment Filter Dropdown */}
-                        <div className="relative">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsEnvDropdownOpen(!isEnvDropdownOpen);
-                                    setIsStatusDropdownOpen(false);
-                                    setIsBranchDropdownOpen(false);
-                                }}
-                                className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 rounded-sm py-2 pl-3 pr-4 text-sm text-zinc-400 hover:text-white hover:border-zinc-700 transition-all min-w-[160px] justify-between"
-                            >
-                                <span className="capitalize">{filterEnv === 'all' ? 'All Environments' : filterEnv}</span>
-                                <ChevronDown className={clsx("h-4 w-4 transition-transform", isEnvDropdownOpen && "rotate-180")} />
-                            </button>
-
-                            <AnimatePresence>
-                                {isEnvDropdownOpen && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 5 }}
-                                        transition={{ duration: 0.1 }}
-                                        className="absolute right-0 top-full mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-sm shadow-xl z-50 overflow-hidden"
-                                    >
-                                        {['all', 'production', 'staging', 'preview'].map((env) => (
-                                            <button
-                                                key={env}
-                                                onClick={() => {
-                                                    setFilterEnv(env as any);
-                                                    setIsEnvDropdownOpen(false);
-                                                }}
-                                                className={clsx(
-                                                    "w-full text-left px-3 py-2 text-sm transition-colors",
-                                                    filterEnv === env ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
-                                                )}
-                                            >
-                                                <span className="capitalize">{env === 'all' ? 'All Environments' : env}</span>
-                                            </button>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-
-                        {/* Branch Filter Dropdown */}
-                        <div className="relative">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsBranchDropdownOpen(!isBranchDropdownOpen);
-                                    setIsStatusDropdownOpen(false);
-                                    setIsEnvDropdownOpen(false);
-                                }}
-                                className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 rounded-sm py-2 pl-3 pr-4 text-sm text-zinc-400 hover:text-white hover:border-zinc-700 transition-all min-w-[160px] justify-between"
-                            >
-                                <span className="truncate max-w-[120px]">{filterBranch === 'all' ? 'All Branches' : filterBranch}</span>
-                                <ChevronDown className={clsx("h-4 w-4 transition-transform", isBranchDropdownOpen && "rotate-180")} />
-                            </button>
-
-                            <AnimatePresence>
-                                {isBranchDropdownOpen && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 5 }}
-                                        transition={{ duration: 0.1 }}
-                                        className="absolute right-0 top-full mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-sm shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto"
-                                    >
-                                        <button
-                                            onClick={() => {
-                                                setFilterBranch('all');
-                                                setIsBranchDropdownOpen(false);
-                                            }}
-                                            className={clsx(
-                                                "w-full text-left px-3 py-2 text-sm transition-colors",
-                                                filterBranch === 'all' ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
-                                            )}
-                                        >
-                                            All Branches
-                                        </button>
-                                        {uniqueBranches.map((branch) => (
-                                            <button
-                                                key={branch}
-                                                onClick={() => {
-                                                    setFilterBranch(branch);
-                                                    setIsBranchDropdownOpen(false);
-                                                }}
-                                                className={clsx(
-                                                    "w-full text-left px-3 py-2 text-sm transition-colors truncate",
-                                                    filterBranch === branch ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
-                                                )}
-                                            >
-                                                {branch}
-                                            </button>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-                </div>
+                {/* Filters */}
+                <DeploymentFilters
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    filterStatus={filterStatus}
+                    setFilterStatus={setFilterStatus}
+                    filterEnv={filterEnv}
+                    setFilterEnv={setFilterEnv}
+                    filterBranch={filterBranch}
+                    setFilterBranch={setFilterBranch}
+                    uniqueBranches={uniqueBranches}
+                />
 
                 {/* Deployments List */}
-                <div className="space-y-4">
-                    {isLoading ? (
-                        <div className="flex justify-center py-20">
-                            <Loader2 className="h-8 w-8 text-zinc-500 animate-spin" />
-                        </div>
-                    ) : (
-                        <>
-                            {filteredDeployments.map((dep, index) => (
-                                <Link key={dep.id} to={`/deployments/${dep.id}`}>
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.05 }}
-                                        className="group bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 hover:bg-zinc-900/50 hover:border-zinc-700 transition-all cursor-pointer"
-                                    >
-                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <DeploymentList
+                    deployments={filteredDeployments}
+                    isLoading={isLoading}
+                    onRollbackSuccess={() => setRefreshKey(prev => prev + 1)}
+                />
 
-                                            {/* Left: Status & Project Info */}
-                                            <div className="flex items-start gap-4">
-                                                <div className={clsx("mt-1 p-2 rounded-full bg-zinc-900 border border-zinc-800",
-                                                    dep.status === 0 && "animate-pulse"
-                                                )}>
-                                                    {getStatusIcon(dep.status)}
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <h3 className="text-white font-medium">{dep.projectName}</h3>
-                                                        <span className="text-zinc-600 text-xs">•</span>
-                                                        <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
-                                                            dep.environment.toLowerCase() === 'production' ? "bg-purple-500/10 text-purple-400" :
-                                                                dep.environment.toLowerCase() === 'staging' ? "bg-amber-500/10 text-amber-400" :
-                                                                    "bg-blue-500/10 text-blue-400"
-                                                        )}>
-                                                            {dep.environment}
-                                                        </span>
-                                                        {dep.branch && (
-                                                            <>
-                                                                <span className="text-zinc-600 text-xs">•</span>
-                                                                <span className="text-xs text-zinc-400 font-mono flex items-center gap-1">
-                                                                    <GitCommit className="h-3 w-3" />
-                                                                    {dep.branch}
-                                                                </span>
-                                                            </>
-                                                        )}
-                                                    </div >
-                                                    <div className="flex items-center gap-2 text-sm text-zinc-400">
-                                                        <GitCommit className="h-3 w-3" />
-                                                        <span className="font-mono text-zinc-500">{dep.commitHash}</span>
-                                                        <span className="text-zinc-300">{dep.commitMessage}</span>
-                                                    </div>
-                                                </div >
-                                            </div >
-
-                                            {/* Right: Meta Info */}
-                                            <div className="flex items-center gap-6 text-sm text-zinc-500 font-mono">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-300 uppercase">
-                                                        {dep.author.substring(0, 2)}
-                                                    </div>
-                                                    <span>{dep.author}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Clock className="h-3 w-3" />
-                                                    <span>{formatTimeAgo(dep.deployedAt)}</span>
-                                                </div >
-                                                <div className="w-20 text-right">
-                                                    {dep.duration}
-                                                </div>
-
-                                                {/* Actions Menu */}
-                                                <div className="relative group/menu">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            // We handle the click in the parent Link, but we want to open menu here
-                                                            // Actually, since the whole card is a link, we need to stop propagation
-                                                            e.stopPropagation();
-                                                        }}
-                                                        className="p-2 hover:bg-zinc-800 rounded-sm text-zinc-500 hover:text-white transition-colors"
-                                                    >
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </button>
-
-                                                    {/* Dropdown - appearing on hover of the button wrapper for simplicity, or we could use state */}
-                                                    <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-900 border border-zinc-800 rounded-sm shadow-xl opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all z-10">
-                                                        <button
-                                                            onClick={async (e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                if (!confirm(`Are you sure you want to rollback to version ${dep.version}?`)) return;
-
-                                                                try {
-                                                                    await rollback(dep.id);
-                                                                    toast.success('Rollback started successfully');
-                                                                    setRefreshKey(prev => prev + 1);
-                                                                } catch (error) {
-                                                                    console.error('Rollback failed:', error);
-                                                                    toast.error('Failed to start rollback');
-                                                                }
-                                                            }}
-                                                            className="w-full text-left px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white flex items-center gap-2"
-                                                        >
-                                                            <RotateCcw className="h-4 w-4" />
-                                                            Rollback to this
-                                                        </button>
-                                                        <Link
-                                                            to={`/deployments/${dep.id}`}
-                                                            className="w-full text-left px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white flex items-center gap-2"
-                                                        >
-                                                            <ExternalLink className="h-4 w-4" />
-                                                            View Details
-                                                        </Link>
-                                                    </div>
-                                                </div>
-                                            </div >
-
-                                        </div >
-                                    </motion.div >
-                                </Link >
-                            ))}
-
-                            {
-                                filteredDeployments.length === 0 && (
-                                    <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
-                                        <Rocket className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                                        <p className="text-zinc-500 font-mono">NO_DEPLOYMENTS_FOUND</p>
-                                    </div>
-                                )
-                            }
-                        </>
-                    )}
-                </div >
-
-            </div >
+            </div>
 
             <TriggerDeploymentModal
                 isOpen={isDeployModalOpen}
@@ -427,7 +111,7 @@ const DeploymentsPage: React.FC = () => {
                     setRefreshKey(prev => prev + 1);
                 }}
             />
-        </div >
+        </div>
     );
 };
 

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Filter, LayoutGrid, List, ChevronDown, Loader2 } from 'lucide-react';
-import ProjectCard, { Project } from '../components/ProjectCard';
-import CreateProjectModal from '../components/CreateProjectModal';
-import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
-import { projectService } from '../services/projectService';
+import { Plus, Search, LayoutGrid, List, ChevronDown, Loader2 } from 'lucide-react';
+import ProjectCard from '../features/projects/components/ProjectCard';
+import CreateProjectModal from '../features/projects/components/CreateProjectModal';
+import TriggerDeploymentModal from '../features/deployments/components/TriggerDeploymentModal';
+import { projectService, Project } from '../services/projectService';
 import { clsx } from 'clsx';
 
 const ProjectsPage: React.FC = () => {
@@ -176,13 +176,6 @@ const ProjectsPage: React.FC = () => {
                             <motion.div key={project.id} variants={item}>
                                 <ProjectCard
                                     project={project}
-                                    onDeploy={() => {
-                                        // We'll need to update the modal to accept a pre-selected project
-                                        // For now, just open it, and we'll add state for selected project
-                                        setSelectedProjectForDeploy(project);
-                                        setIsCreateModalOpen(false); // Ensure create modal is closed
-                                        setIsDeployModalOpen(true);
-                                    }}
                                 />
                             </motion.div>
                         ))}

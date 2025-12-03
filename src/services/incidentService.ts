@@ -25,19 +25,34 @@ export const getStatusString = (status: number): 'open' | 'investigating' | 'res
     return map[status] || 'open';
 };
 
-// Helper to convert frontend string to backend enum
-const getSeverityEnum = (severity: string): number => {
-    const map: Record<string, number> = { low: 0, medium: 1, high: 2, critical: 3 };
-    return map[severity] || 0;
-};
 
-const getStatusEnum = (status: string): number => {
-    const map: Record<string, number> = { open: 0, investigating: 1, resolved: 2, closed: 3 };
-    return map[status] || 0;
-};
+export interface PagedResult<T> {
+    items: T[];
+    totalCount: number;
+    pageNumber: number;
+    pageSize: number;
+    totalPages: number;
+}
 
-export const getIncidents = async (): Promise<Incident[]> => {
-    const response = await fetch(API_URL);
+export const getIncidents = async (page = 1, pageSize = 10, deploymentId?: number, projectId?: number): Promise<PagedResult<Incident>> => {
+    const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: pageSize.toString()
+    });
+    if (deploymentId) params.append('deploymentId', deploymentId.toString());
+    if (projectId) params.append('projectId', projectId.toString());
+
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_URL}?${params.toString()}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
+    });
     if (!response.ok) {
         throw new Error('Failed to fetch incidents');
     }
@@ -45,7 +60,10 @@ export const getIncidents = async (): Promise<Incident[]> => {
 };
 
 export const getIncidentById = async (id: number | string): Promise<Incident | null> => {
-    const response = await fetch(`${API_URL}/${id}`);
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/${id}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
+    });
     if (!response.ok) {
         if (response.status === 404) return null;
         throw new Error('Failed to fetch incident');
@@ -54,16 +72,23 @@ export const getIncidentById = async (id: number | string): Promise<Incident | n
 };
 
 export const getIncidentsByDeploymentId = async (deploymentId: number | string): Promise<Incident[]> => {
-    const incidents = await getIncidents();
-    return incidents.filter(i => i.deploymentId?.toString() === deploymentId.toString());
+    // Fetch all (or a large page) for now to maintain compatibility, or implement pagination in UI
+    const result = await getIncidents(1, 100, Number(deploymentId));
+    return result.items;
 };
 
 export const createIncident = async (data: Omit<Incident, 'id' | 'createdAt'>): Promise<Incident> => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(API_URL, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
             ...data,
             createdAt: new Date().toISOString()
@@ -82,11 +107,17 @@ export const updateIncident = async (id: number | string, updates: Partial<Incid
         throw new Error('Incident not found');
     }
 
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_URL}/${id}`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
             ...current,
             ...updates

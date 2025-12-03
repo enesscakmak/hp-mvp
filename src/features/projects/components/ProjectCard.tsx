@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { MoreHorizontal, GitCommit, Clock, Activity } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Link } from 'react-router-dom';
-import { formatDateTime } from '../utils/dateUtils';
+import { formatDateTime } from '../../../utils/dateUtils';
 
 export interface Project {
     id: number;

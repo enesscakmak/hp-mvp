@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-    CheckSquare,
     ChevronRight,
     Clock,
     User,
     CheckCircle2,
     Circle,
-    AlertCircle,
-    ArrowLeft
+    AlertCircle
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import {
@@ -22,7 +20,6 @@ import { toast } from 'sonner';
 
 const ChecklistRunPage: React.FC = () => {
     const { runId } = useParams();
-    const navigate = useNavigate();
     const [run, setRun] = useState<ChecklistRun | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isCompleting, setIsCompleting] = useState(false);
@@ -150,7 +147,7 @@ const ChecklistRunPage: React.FC = () => {
                         <div className="h-2 bg-zinc-900 rounded-full overflow-hidden">
                             <motion.div
                                 initial={{ width: 0 }}
-                                animate={{ width: `${run.progress}%` }}
+                                animate={{ width: `${run.progress}% ` }}
                                 transition={{ duration: 0.5, ease: "easeOut" }}
                                 className={clsx(
                                     "h-full rounded-full transition-colors",

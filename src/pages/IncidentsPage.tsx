@@ -2,19 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
-    AlertTriangle,
+    Plus,
     Search,
-    Clock,
-    CheckCircle2,
-    XCircle,
     Loader2,
-    Plus
+    AlertTriangle,
+    CheckCircle2,
+    Clock
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getIncidents, Incident, getSeverityString, getStatusString } from '../services/incidentService';
 import { formatDateTime } from '../utils/dateUtils';
-import CustomDropdown from '../components/CustomDropdown';
-import CreateIncidentModal from '../components/CreateIncidentModal';
+import CustomDropdown from '../components/ui/CustomDropdown';
+import CreateIncidentModal from '../features/incidents/components/CreateIncidentModal';
 
 
 
@@ -33,7 +32,7 @@ const IncidentsPage: React.FC = () => {
     const loadIncidents = async () => {
         setIsLoading(true);
         const data = await getIncidents();
-        setIncidents(data);
+        setIncidents(data.items);
         setIsLoading(false);
     };
 

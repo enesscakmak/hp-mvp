@@ -1,7 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Eye, EyeOff, Save, X, Loader2, Copy, Check } from 'lucide-react';
+import { Plus, Trash2, Save, Eye, EyeOff, Copy, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { envVarService, EnvironmentVariable } from '../services/envVarService';
+
+import Input from '../../../components/ui/Input';
+import Button from '../../../components/ui/Button';
+import { envVarService, EnvironmentVariable } from '../../../services/envVarService';
 
 interface EnvVarManagerProps {
     projectId: number;
@@ -90,13 +94,13 @@ const EnvVarManager: React.FC<EnvVarManagerProps> = ({ projectId }) => {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-white">Environment Variables</h3>
-                <button
+                <Button
                     onClick={() => setIsAdding(true)}
-                    className="px-3 py-1.5 bg-white text-black text-sm font-medium rounded-sm hover:bg-zinc-200 transition-colors flex items-center gap-2"
+                    size="sm"
+                    leftIcon={<Plus className="h-4 w-4" />}
                 >
-                    <Plus className="h-4 w-4" />
                     Add Variable
-                </button>
+                </Button>
             </div>
 
             <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm overflow-hidden">
@@ -105,62 +109,49 @@ const EnvVarManager: React.FC<EnvVarManagerProps> = ({ projectId }) => {
                         <tr>
                             <th className="px-4 py-3 font-medium">Key</th>
                             <th className="px-4 py-3 font-medium">Value</th>
-                            <th className="px-4 py-3 font-medium text-right">Actions</th>
+                            <th className="px-4 py-3 font-medium w-24">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800">
                         {isAdding && (
-                            <tr className="bg-zinc-900/50">
+                            <tr className="bg-zinc-900/30">
                                 <td className="px-4 py-3">
-                                    <input
-                                        type="text"
+                                    <Input
                                         value={newKey}
-                                        onChange={(e) => setNewKey(e.target.value.toUpperCase())}
-                                        placeholder="API_KEY"
-                                        className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-2 py-1 text-white font-mono text-xs focus:outline-none focus:border-blue-500"
+                                        onChange={(e) => setNewKey(e.target.value)}
+                                        placeholder="KEY_NAME"
+                                        className="text-xs font-mono py-1 h-8"
                                         autoFocus
                                     />
                                 </td>
                                 <td className="px-4 py-3">
-                                    <input
-                                        type="text"
+                                    <Input
                                         value={newValue}
                                         onChange={(e) => setNewValue(e.target.value)}
                                         placeholder="Value"
-                                        className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-2 py-1 text-white font-mono text-xs focus:outline-none focus:border-blue-500"
+                                        className="text-xs font-mono py-1 h-8"
                                     />
                                 </td>
-                                <td className="px-4 py-3 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <button
-                                            onClick={handleAdd}
-                                            disabled={!newKey || !newValue}
-                                            className="p-1 text-emerald-400 hover:bg-emerald-400/10 rounded-sm transition-colors disabled:opacity-50"
-                                        >
-                                            <Save className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => setIsAdding(false)}
-                                            className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-sm transition-colors"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </div>
+                                <td className="px-4 py-3">
+                                    <Button
+                                        onClick={handleAdd}
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                                    >
+                                        <Save className="h-3.5 w-3.5" />
+                                    </Button>
                                 </td>
                             </tr>
                         )}
-                        {envVars.map((env) => (
+                        {envVars.map(env => (
                             <tr key={env.id} className="group hover:bg-zinc-900/30 transition-colors">
                                 <td className="px-4 py-3 font-mono text-zinc-300">{env.key}</td>
                                 <td className="px-4 py-3 font-mono text-zinc-400">
-                                    <div className="flex items-center gap-2">
-                                        <span>
-                                            {visibleValues.has(env.id) ? env.value : '••••••••••••••••'}
-                                        </span>
-                                    </div>
+                                    {visibleValues.has(env.id) ? env.value : '••••••••••••••••'}
                                 </td>
-                                <td className="px-4 py-3 text-right">
-                                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <td className="px-4 py-3">
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
                                             onClick={() => toggleVisibility(env.id)}
                                             className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-sm transition-colors"
@@ -196,7 +187,7 @@ const EnvVarManager: React.FC<EnvVarManagerProps> = ({ projectId }) => {
                     </tbody>
                 </table>
             </div>
-        </div>
+        </div >
     );
 };
 

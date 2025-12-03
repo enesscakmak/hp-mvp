@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { FolderKanban, Rocket, AlertTriangle, CheckSquare, Activity, Clock, Terminal, Loader2 } from 'lucide-react';
-import StatCard from '../components/StatCard';
+import StatCard from '../components/ui/StatCard';
+import Card from '../components/ui/Card';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
-import CreateIncidentModal from '../components/CreateIncidentModal';
+import TriggerDeploymentModal from '../features/deployments/components/TriggerDeploymentModal';
+import CreateIncidentModal from '../features/incidents/components/CreateIncidentModal';
 import { projectService } from '../services/projectService';
 import { getDeployments } from '../services/deploymentService';
 import { getIncidents } from '../services/incidentService';
@@ -41,8 +42,8 @@ const Dashboard: React.FC = () => {
             // Calculate stats
             const now = new Date();
             const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-            const recentDeployments = deployments.filter(d => new Date(d.deployedAt) > oneDayAgo);
-            const openIncidents = incidents.filter(i => i.status === 0 || i.status === 1);
+            const recentDeployments = deployments.items.filter(d => new Date(d.deployedAt) > oneDayAgo);
+            const openIncidents = incidents.items.filter(i => i.status === 0 || i.status === 1);
 
             // Parse average latency from projects (backend sends as "45ms")
             const latencies = projects
@@ -229,7 +230,7 @@ const Dashboard: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm overflow-hidden max-h-[500px] overflow-y-auto">
+                        <Card className="overflow-hidden max-h-[500px] overflow-y-auto p-0">
                             {activities.length === 0 ? (
                                 <div className="p-4 text-center text-zinc-500 text-sm font-mono">
                                     No recent activity
@@ -266,7 +267,7 @@ const Dashboard: React.FC = () => {
                                     })}
                                 </div>
                             )}
-                        </div>
+                        </Card>
                     </motion.div>
 
                     <motion.div variants={item} className="space-y-6">
@@ -275,7 +276,7 @@ const Dashboard: React.FC = () => {
                             Quick Actions
                         </h2>
 
-                        <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-6 space-y-6">
+                        <Card className="p-6 space-y-6">
                             <div className="space-y-2">
                                 <div className="flex justify-between text-xs font-mono text-zinc-400">
                                     <span>Avg Latency</span>
@@ -305,7 +306,7 @@ const Dashboard: React.FC = () => {
                                     <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(stats.incidents * 10, 100)}%` }} />
                                 </div>
                             </div>
-                        </div>
+                        </Card>
 
                         <div className="grid grid-cols-2 gap-4">
                             <button

@@ -79,7 +79,7 @@ export const updateChecklistTemplate = async (id: string, updates: Partial<Check
         updatedAt: new Date().toISOString()
     };
 
-    const updatedTemplate = await api.put<BackendChecklistTemplate>(`/ChecklistTemplates/${id}`, backendData);
+    await api.put<BackendChecklistTemplate>(`/ChecklistTemplates/${id}`, backendData);
     // PUT returns 204 No Content usually, so we might need to fetch it again or return optimistic update
     // For now, let's assume we return the updated object or fetch it
     return { ...current, ...updates, updatedAt: new Date().toISOString() };

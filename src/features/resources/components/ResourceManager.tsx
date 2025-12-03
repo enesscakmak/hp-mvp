@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ProjectResource, resourceService } from '../services/resourceService';
+import { ProjectResource, resourceService } from '../../../services/resourceService';
 import { Loader2, Plus, Trash2, Database, Server, Globe, Box, Save, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import ResourceDetailModal from './ResourceDetailModal';

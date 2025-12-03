@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Layout from './components/Layout'
+import MainLayout from './layouts/MainLayout'
 import Dashboard from './pages/Dashboard';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailsPage from './pages/ProjectDetailsPage';
@@ -19,18 +19,6 @@ import RegisterPage from './pages/RegisterPage';
 
 const queryClient = new QueryClient()
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { isAuthenticated, isLoading } = useAuth();
-
-    if (isLoading) {
-        return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">Loading...</div>;
-    }
-
-    if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
-    }
-    return <>{children}</>;
-};
 
 const AppRoutes = () => {
     const { isAuthenticated, isLoading } = useAuth();
@@ -49,7 +37,7 @@ const AppRoutes = () => {
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </>
             ) : (
-                <Route element={<Layout />}>
+                <Route element={<MainLayout />}>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/projects" element={<ProjectsPage />} />
                     <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />

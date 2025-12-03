@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Rocket, CheckCircle2, XCircle, Loader2, Clock, GitCommit, AlertTriangle, Github, RotateCcw, Terminal, Activity } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, AlertTriangle, Activity, Terminal, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getIncidentsByDeploymentId, Incident, getSeverityString, getStatusString } from '../services/incidentService';
-import ChecklistSection from '../components/ChecklistSection';
+import ChecklistSection from '../features/checklists/components/ChecklistSection';
 import { getDeploymentById, Deployment } from '../services/deploymentService';
-import { formatTimeAgo, formatDateTime } from '../utils/dateUtils';
+import { formatDateTime } from '../utils/dateUtils';
+import DeploymentHeader from '../features/deployments/components/DeploymentHeader';
+import DeploymentLogs from '../features/deployments/components/DeploymentLogs';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
 
 interface LogEntry {
     time: string;
@@ -69,42 +73,6 @@ const DeploymentDetailsPage: React.FC = () => {
 
     if (!deployment) return <div className="min-h-screen bg-zinc-950 text-white p-8">Deployment not found</div>;
 
-    const getStatusIcon = (status: number) => {
-        switch (status) {
-            case 1: return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
-            case 2: return <XCircle className="h-5 w-5 text-rose-500" />;
-            case 0: return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />;
-            default: return <Clock className="h-5 w-5 text-zinc-500" />;
-        }
-    };
-
-    const getStatusColor = (status: number) => {
-        switch (status) {
-            case 1: return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-            case 2: return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-            case 0: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-            default: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
-        }
-    };
-
-    const getStatusText = (status: number) => {
-        switch (status) {
-            case 1: return 'success';
-            case 2: return 'failed';
-            case 0: return 'building';
-            default: return 'queued';
-        }
-    };
-
-    const getLogColor = (level: string) => {
-        switch (level) {
-            case 'success': return 'text-emerald-400';
-            case 'error': return 'text-rose-400';
-            case 'warning': return 'text-amber-400';
-            default: return 'text-zinc-400';
-        }
-    };
-
     const tabs = [
         { id: 'logs', label: 'Build Logs', icon: Terminal },
         { id: 'timeline', label: 'Timeline', icon: Activity },
@@ -113,81 +81,26 @@ const DeploymentDetailsPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-zinc-950 text-white">
             {/* Header */}
-            <div className="border-b border-zinc-800 bg-zinc-950/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-                    {/* Breadcrumbs */}
-                    <div className="flex items-center gap-2 text-sm font-mono text-zinc-500 mb-4">
-                        <Link to="/deployments" className="hover:text-white transition-colors">Deployments</Link>
-                        <ChevronRight className="h-4 w-4" />
-                        <span className="text-white">{deployment.projectName}</span>
-                        <ChevronRight className="h-4 w-4" />
-                        <span className="text-white">{deployment.commitHash}</span>
-                    </div>
+            <DeploymentHeader deployment={deployment} />
 
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className={clsx("p-3 rounded-sm bg-zinc-900 border border-zinc-800")}>
-                                {getStatusIcon(deployment.status)}
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-                                    {deployment.projectName}
-                                    <span className={clsx("px-2 py-0.5 rounded-sm text-xs font-mono border uppercase",
-                                        deployment.environment.toLowerCase() === 'production' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
-                                            deployment.environment.toLowerCase() === 'staging' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                                                "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                                    )}>
-                                        {deployment.environment}
-                                    </span>
-                                    <span className={clsx("px-2 py-0.5 rounded-full text-xs font-mono border uppercase",
-                                        getStatusColor(deployment.status)
-                                    )}>
-                                        {getStatusText(deployment.status)}
-                                    </span>
-                                </h1>
-                                <div className="flex items-center gap-4 text-sm text-zinc-400 mt-2">
-                                    <div className="flex items-center gap-2">
-                                        <GitCommit className="h-3 w-3" />
-                                        <span className="font-mono text-zinc-500">{deployment.commitHash}</span>
-                                        <span className="text-zinc-300">{deployment.commitMessage}</span>
-                                    </div>
-                                    <span>•</span>
-                                    <span>{formatTimeAgo(deployment.deployedAt)}</span>
-                                    <span>•</span>
-                                    <span>{deployment.duration}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <button className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-sm text-sm font-medium text-zinc-300 hover:text-white hover:border-zinc-700 transition-all">
-                                <Github className="h-4 w-4" />
-                                <span>View Commit</span>
-                            </button>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-sm text-sm font-medium text-zinc-300 hover:text-white hover:border-zinc-700 transition-all">
-                                <RotateCcw className="h-4 w-4" />
-                                <span>Rollback</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Tabs */}
-                    <div className="flex items-center gap-1 mt-8 -mb-6 overflow-x-auto no-scrollbar pb-1">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
-                                className={clsx(
-                                    "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all",
-                                    activeTab === tab.id
-                                        ? "border-white text-white"
-                                        : "border-transparent text-zinc-500 hover:text-zinc-300 hover:border-zinc-800"
-                                )}
-                            >
-                                <tab.icon className="h-4 w-4" />
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
+            {/* Tabs Navigation (Sticky below header) */}
+            <div className="bg-zinc-950/50 backdrop-blur-sm border-b border-zinc-800 sticky top-[137px] z-10 px-4 md:px-8">
+                <div className="max-w-7xl mx-auto flex items-center gap-1 overflow-x-auto no-scrollbar">
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={clsx(
+                                "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all",
+                                activeTab === tab.id
+                                    ? "border-white text-white"
+                                    : "border-transparent text-zinc-500 hover:text-zinc-300 hover:border-zinc-800"
+                            )}
+                        >
+                            <tab.icon className="h-4 w-4" />
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -200,30 +113,7 @@ const DeploymentDetailsPage: React.FC = () => {
                     transition={{ duration: 0.2 }}
                 >
                     {activeTab === 'logs' && (
-                        <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm overflow-hidden">
-                            <div className="bg-zinc-900 border-b border-zinc-800 px-4 py-2 flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-sm font-mono text-zinc-400">
-                                    <Terminal className="h-4 w-4" />
-                                    <span>Build Output</span>
-                                </div>
-                                <button className="text-xs text-zinc-500 hover:text-white transition-colors">
-                                    Download Logs
-                                </button>
-                            </div>
-                            <div className="p-4 font-mono text-sm space-y-1 max-h-[600px] overflow-y-auto">
-                                {logs.map((log, index) => (
-                                    <div key={index} className="flex items-start gap-4">
-                                        <span className="text-zinc-600 select-none">{log.time}</span>
-                                        <span className={clsx("flex-1", getLogColor(log.level))}>
-                                            {log.message}
-                                        </span>
-                                    </div>
-                                ))}
-                                {logs.length === 0 && (
-                                    <div className="text-zinc-500 italic">No logs available</div>
-                                )}
-                            </div>
-                        </div>
+                        <DeploymentLogs logs={logs} />
                     )}
 
                     {activeTab === 'timeline' && (
@@ -263,12 +153,12 @@ const DeploymentDetailsPage: React.FC = () => {
                                             )} />
                                         )}
                                     </div>
-                                    <div className="flex-1 bg-zinc-900/30 border border-zinc-800 rounded-sm p-4">
+                                    <Card className="flex-1 p-4">
                                         <div className="flex items-center justify-between">
                                             <h3 className="font-medium text-white">{step.step}</h3>
                                             <span className="text-sm text-zinc-500 font-mono">{step.duration}</span>
                                         </div>
-                                    </div>
+                                    </Card>
                                 </div>
                             ))}
                             {/* End Marker */}
@@ -328,37 +218,47 @@ const DeploymentDetailsPage: React.FC = () => {
                                 <Link
                                     key={incident.id}
                                     to={`/incidents/${incident.id}`}
-                                    className="block bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 hover:bg-zinc-900/50 transition-colors group"
+                                    className="block group"
                                 >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <h3 className="font-medium text-white group-hover:text-emerald-400 transition-colors">{incident.title}</h3>
-                                                <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
-                                                    getSeverityString(incident.severity) === 'critical' ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
-                                                        getSeverityString(incident.severity) === 'high' ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" :
-                                                            getSeverityString(incident.severity) === 'medium' ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
-                                                                "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
-                                                )}>
-                                                    {getSeverityString(incident.severity)}
-                                                </span>
-                                                <span className={clsx("text-xs px-1.5 py-0.5 rounded-sm uppercase font-mono",
-                                                    getStatusString(incident.status) === 'resolved' || getStatusString(incident.status) === 'closed' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
-                                                        getStatusString(incident.status) === 'investigating' ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
-                                                            "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
-                                                )}>
-                                                    {getStatusString(incident.status)}
-                                                </span>
+                                    <Card className="p-4 hover:bg-zinc-900/50 transition-colors">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <h3 className="font-medium text-white group-hover:text-emerald-400 transition-colors">{incident.title}</h3>
+                                                    <Badge
+                                                        variant={
+                                                            getSeverityString(incident.severity) === 'critical' ? 'error' :
+                                                                getSeverityString(incident.severity) === 'high' ? 'warning' :
+                                                                    getSeverityString(incident.severity) === 'medium' ? 'warning' :
+                                                                        'neutral'
+                                                        }
+                                                        size="sm"
+                                                        className="uppercase"
+                                                    >
+                                                        {getSeverityString(incident.severity)}
+                                                    </Badge>
+                                                    <Badge
+                                                        variant={
+                                                            getStatusString(incident.status) === 'resolved' || getStatusString(incident.status) === 'closed' ? 'success' :
+                                                                getStatusString(incident.status) === 'investigating' ? 'info' :
+                                                                    'neutral'
+                                                        }
+                                                        size="sm"
+                                                        className="uppercase"
+                                                    >
+                                                        {getStatusString(incident.status)}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-sm text-zinc-400">{incident.description}</p>
+                                                <div className="flex items-center gap-4 mt-2 text-xs text-zinc-500 font-mono">
+                                                    <span>Created {formatDateTime(incident.createdAt)}</span>
+                                                    {incident.resolvedAt && <span>• Resolved {formatDateTime(incident.resolvedAt)}</span>}
+                                                    {incident.assignedTo && <span>• Assigned to {incident.assignedTo}</span>}
+                                                </div>
                                             </div>
-                                            <p className="text-sm text-zinc-400">{incident.description}</p>
-                                            <div className="flex items-center gap-4 mt-2 text-xs text-zinc-500 font-mono">
-                                                <span>Created {formatDateTime(incident.createdAt)}</span>
-                                                {incident.resolvedAt && <span>• Resolved {formatDateTime(incident.resolvedAt)}</span>}
-                                                {incident.assignedTo && <span>• Assigned to {incident.assignedTo}</span>}
-                                            </div>
+                                            <ChevronRight className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
                                         </div>
-                                        <ChevronRight className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-                                    </div>
+                                    </Card>
                                 </Link>
                             ))}
                         </div>
