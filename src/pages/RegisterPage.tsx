@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowRight, LayoutDashboard, Loader2 } from 'lucide-react';
+import { ArrowRight, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
 
 const RegisterPage: React.FC = () => {
     const { register } = useAuth();
@@ -17,8 +19,8 @@ const RegisterPage: React.FC = () => {
         setIsLoading(true);
         try {
             await register({ username, email, password });
-            toast.success('Registration successful! Please log in.');
-            navigate('/login');
+            toast.success('Registration successful! Welcome to your dashboard.');
+            navigate('/');
         } catch (error: any) {
             console.error('Registration failed', error);
             toast.error(error.response?.data || 'Registration failed. Please try again.');
@@ -50,74 +52,50 @@ const RegisterPage: React.FC = () => {
 
                 <div className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-8 shadow-xl">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        <div>
-                            <label htmlFor="username" className="block text-sm font-medium text-zinc-300">
-                                Username
-                            </label>
-                            <div className="mt-2">
-                                <input
-                                    id="username"
-                                    name="username"
-                                    type="text"
-                                    autoComplete="username"
-                                    required
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    className="block w-full rounded-xl border-0 bg-zinc-950/50 py-2.5 text-white shadow-sm ring-1 ring-inset ring-zinc-800 placeholder:text-zinc-600 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6 transition-all duration-200"
-                                />
-                            </div>
-                        </div>
+                        <Input
+                            label="Username"
+                            id="username"
+                            name="username"
+                            type="text"
+                            autoComplete="username"
+                            required
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="Choose a username"
+                        />
 
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-zinc-300">
-                                Email address
-                            </label>
-                            <div className="mt-2">
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    autoComplete="email"
-                                    required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="block w-full rounded-xl border-0 bg-zinc-950/50 py-2.5 text-white shadow-sm ring-1 ring-inset ring-zinc-800 placeholder:text-zinc-600 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6 transition-all duration-200"
-                                />
-                            </div>
-                        </div>
+                        <Input
+                            label="Email address"
+                            id="email"
+                            name="email"
+                            type="email"
+                            autoComplete="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Enter your email"
+                        />
 
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-zinc-300">
-                                Password
-                            </label>
-                            <div className="mt-2">
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    autoComplete="new-password"
-                                    required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="block w-full rounded-xl border-0 bg-zinc-950/50 py-2.5 text-white shadow-sm ring-1 ring-inset ring-zinc-800 placeholder:text-zinc-600 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6 transition-all duration-200"
-                                />
-                            </div>
-                        </div>
+                        <Input
+                            label="Password"
+                            id="password"
+                            name="password"
+                            type="password"
+                            autoComplete="new-password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Create a password"
+                        />
 
-                        <button
+                        <Button
                             type="submit"
-                            disabled={isLoading}
-                            className="flex w-full justify-center items-center rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-black shadow-sm hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                            isLoading={isLoading}
+                            className="w-full"
+                            rightIcon={<ArrowRight className="h-4 w-4" />}
                         >
-                            {isLoading ? (
-                                <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : (
-                                <>
-                                    Create account
-                                    <ArrowRight className="ml-2 h-4 w-4" />
-                                </>
-                            )}
-                        </button>
+                            Create account
+                        </Button>
                     </form>
 
                     <div className="mt-6 text-center space-y-4">

@@ -3,70 +3,47 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
     Activity,
-    Clock,
-    GitCommit,
-    MoreHorizontal,
     Rocket,
     AlertTriangle,
-    CheckCircle2,
-    XCircle,
-    ArrowLeft,
+    ChevronRight,
+    Loader2,
     Settings,
     LayoutDashboard,
-    ExternalLink,
-    Github,
-    ChevronRight,
-    Trash2,
-    Loader2,
-    Edit2,
-    Save
+    Github
 } from 'lucide-react';
-import { toast } from 'sonner';
+
 import { clsx } from 'clsx';
-import { formatTimeAgo, formatDateTime } from '../utils/dateUtils';
-import StatCard from '../components/StatCard';
 import { projectService, Project } from '../services/projectService';
 import { getDeployments, Deployment } from '../services/deploymentService';
-import { getIncidents, Incident, getSeverityString, getStatusString } from '../services/incidentService';
-import TriggerDeploymentModal from '../components/TriggerDeploymentModal';
-import WikiEditor from '../components/WikiEditor';
-import ReactMarkdown from 'react-markdown';
+import { getIncidents, Incident } from '../services/incidentService';
+import TriggerDeploymentModal from '../features/deployments/components/TriggerDeploymentModal';
+import EnvVarManager from '../features/projects/components/EnvVarManager';
 
-import EnvVarManager from '../components/EnvVarManager';
-import ResourceManager from '../components/ResourceManager';
-
+// Feature Components
+import ProjectOverviewTab from '../features/projects/components/ProjectOverviewTab';
+import ProjectWikiTab from '../features/projects/components/ProjectWikiTab';
+import ProjectInfrastructureTab from '../features/projects/components/ProjectInfrastructureTab';
+import ProjectSettingsTab from '../features/projects/components/ProjectSettingsTab';
+import ProjectDeploymentsTab from '../features/projects/components/ProjectDeploymentsTab';
+import ProjectIncidentsTab from '../features/projects/components/ProjectIncidentsTab';
 
 const ProjectDetailsPage: React.FC = () => {
     const { projectId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState<'overview' | 'deployments' | 'incidents' | 'settings' | 'wiki' | 'infrastructure' | 'environment'>('overview');
-    const [isEditingWiki, setIsEditingWiki] = useState(false);
 
     useEffect(() => {
         if (location.state && location.state.activeTab) {
             setActiveTab(location.state.activeTab);
         }
     }, [location.state]);
+
     const [project, setProject] = useState<Project | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
     const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
     const [deployments, setDeployments] = useState<Deployment[]>([]);
     const [incidents, setIncidents] = useState<Incident[]>([]);
-
-    // Form State
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        repoUrl: '',
-        k8sNamespace: '',
-        k8sCluster: '',
-        serviceName: '',
-        ingressUrl: '',
-        wikiContent: ''
-    });
 
     useEffect(() => {
         if (projectId) {
@@ -78,31 +55,19 @@ const ProjectDetailsPage: React.FC = () => {
         setIsLoading(true);
         try {
             const [projectData, deploymentsData, incidentsData] = await Promise.all([
-                projectService.getProjectById(id), // Fetch specific project
+                projectService.getProjectById(id),
                 getDeployments(),
                 getIncidents()
             ]);
 
             if (projectData) {
                 setProject(projectData);
-                setFormData({
-                    name: projectData.name,
-                    description: projectData.description,
-                    repoUrl: projectData.repoUrl || '',
-                    k8sNamespace: projectData.k8sNamespace || '',
-                    k8sCluster: projectData.k8sCluster || '',
-                    serviceName: projectData.serviceName || '',
-                    ingressUrl: projectData.ingressUrl || '',
-                    wikiContent: projectData.wikiContent || '',
-                    apiKey: projectData.apiKey || '',
-                    webhookSecret: projectData.webhookSecret || ''
-                });
 
                 // Filter deployments and incidents for this project
-                const projectDeployments = deploymentsData.filter(
+                const projectDeployments = deploymentsData.items.filter(
                     d => d.projectName === projectData.name
                 );
-                const projectIncidents = incidentsData.filter(
+                const projectIncidents = incidentsData.items.filter(
                     i => i.projectId === projectData.id
                 );
 
@@ -116,37 +81,13 @@ const ProjectDetailsPage: React.FC = () => {
         }
     };
 
-    const handleSave = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (!project) return;
-
-        setIsSaving(true);
-        try {
-            const updated = await projectService.updateProject(project.id, formData);
-            setProject(updated);
-
-            // Scroll to top for visual feedback
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-
-            // Keep spinner visible for 500ms for better UX feedback
-            await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (error) {
-            console.error('Failed to update project', error);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     const handleDelete = async () => {
-        if (!project || !window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) return;
-
-        setIsDeleting(true);
+        if (!project) return;
         try {
             await projectService.deleteProject(project.id);
             navigate('/projects');
         } catch (error) {
             console.error('Failed to delete project', error);
-            setIsDeleting(false);
         }
     };
 
@@ -171,9 +112,9 @@ const ProjectDetailsPage: React.FC = () => {
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-        { id: 'wiki', label: 'Wiki', icon: Activity }, // Using Activity icon for now, could be FileText
-        { id: 'infrastructure', label: 'Infrastructure', icon: Settings }, // Using Settings icon for now, could be Server
-        { id: 'environment', label: 'Environment', icon: Settings }, // Using Settings icon for now, could be Lock
+        { id: 'wiki', label: 'Wiki', icon: Activity },
+        { id: 'infrastructure', label: 'Infrastructure', icon: Settings },
+        { id: 'environment', label: 'Environment', icon: Settings },
         { id: 'deployments', label: 'Deployments', icon: Rocket },
         { id: 'incidents', label: 'Incidents', icon: AlertTriangle },
         { id: 'settings', label: 'Settings', icon: Settings },
@@ -264,376 +205,48 @@ const ProjectDetailsPage: React.FC = () => {
                     transition={{ duration: 0.2 }}
                 >
                     {activeTab === 'overview' && (
-                        <div className="space-y-8">
-                            {/* Stats Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                <StatCard
-                                    title="Uptime (30d)"
-                                    value={project.uptime || "0%"}
-                                    trend="+0.01%"
-                                    trendUp={true}
-                                    icon={Activity}
-                                />
-                                <StatCard
-                                    title="Error Rate"
-                                    value={project.errorRate || "0%"}
-                                    trend="-0.05%"
-                                    trendUp={true}
-                                    icon={AlertTriangle}
-                                />
-                                <StatCard
-                                    title="Avg Latency"
-                                    value={project.avgLatency || "0ms"}
-                                    trend="+2ms"
-                                    trendUp={false}
-                                    icon={Clock}
-                                />
-                                <StatCard
-                                    title="Active Users"
-                                    value={project.activeUsers || "0"}
-                                    trend="+12%"
-                                    trendUp={true}
-                                    icon={LayoutDashboard}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                {/* Main Info */}
-                                <div className="lg:col-span-2 space-y-6">
-                                    <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-6">
-                                        <h3 className="text-lg font-bold text-white mb-4">About</h3>
-                                        <div className="prose prose-invert max-w-none">
-                                            <p className="text-zinc-400 text-sm leading-relaxed">
-                                                {project.description}
-                                            </p>
-                                        </div>
-
-                                        <div className="mt-6 pt-6 border-t border-zinc-800 grid grid-cols-2 gap-4">
-                                            <div>
-                                                <p className="text-xs font-mono text-zinc-500 uppercase mb-1">Framework</p>
-                                                <p className="text-white font-mono uppercase">{project.framework}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-mono text-zinc-500 uppercase mb-1">Last Deploy</p>
-                                                <p className="text-white font-mono">{formatDateTime(project.lastDeploy)}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Sidebar Info */}
-                                <div className="space-y-6">
-                                    <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-6">
-                                        <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-wider font-mono">Quick Actions</h3>
-                                        <div className="space-y-2">
-                                            <button
-                                                onClick={() => {
-                                                    // TODO: Implement actual logs view
-                                                    console.log('View Logs for project:', project.id);
-                                                    alert('Logs viewer coming soon!');
-                                                }}
-                                                className="w-full text-left px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-sm text-sm text-zinc-300 hover:text-white transition-colors flex items-center justify-between group"
-                                            >
-                                                <span>View Logs</span>
-                                                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    // TODO: Implement actual metrics view
-                                                    console.log('View Metrics for project:', project.id);
-                                                    alert('Metrics dashboard coming soon!');
-                                                }}
-                                                className="w-full text-left px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-sm text-sm text-zinc-300 hover:text-white transition-colors flex items-center justify-between group"
-                                            >
-                                                <span>View Metrics</span>
-                                                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    // TODO: Implement actual API docs
-                                                    console.log('API Documentation for project:', project.id);
-                                                    alert('API Documentation coming soon!');
-                                                }}
-                                                className="w-full text-left px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-sm text-sm text-zinc-300 hover:text-white transition-colors flex items-center justify-between group"
-                                            >
-                                                <span>API Documentation</span>
-                                                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <ProjectOverviewTab project={project} />
                     )}
 
                     {activeTab === 'wiki' && (
-                        <div className="space-y-6">
-                            {isEditingWiki ? (
-                                <WikiEditor
-                                    initialContent={project.wikiContent || ''}
-                                    onSave={async (content) => {
-                                        try {
-                                            const updatedProject = { ...project, wikiContent: content };
-                                            await projectService.updateProject(project.id, updatedProject);
-                                            setProject(updatedProject);
-                                            setIsEditingWiki(false);
-                                            toast.success('Wiki updated successfully');
-                                        } catch (error) {
-                                            console.error('Failed to update wiki:', error);
-                                            toast.error('Failed to update wiki');
-                                        }
-                                    }}
-                                    onCancel={() => setIsEditingWiki(false)}
-                                />
-                            ) : (
-                                <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-8">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h3 className="text-lg font-bold text-white">Project Documentation</h3>
-                                        <button
-                                            onClick={() => setIsEditingWiki(true)}
-                                            className="text-xs font-mono text-zinc-500 hover:text-white transition-colors uppercase tracking-wider flex items-center gap-2"
-                                        >
-                                            <Edit2 className="h-3 w-3" />
-                                            Edit Wiki
-                                        </button>
-                                    </div>
-                                    <div className="prose prose-invert max-w-none">
-                                        {project.wikiContent ? (
-                                            <ReactMarkdown>{project.wikiContent}</ReactMarkdown>
-                                        ) : (
-                                            <div className="text-center py-12 border border-dashed border-zinc-800 rounded-sm">
-                                                <Activity className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                                                <h3 className="text-lg font-medium text-white">No Documentation</h3>
-                                                <p className="text-zinc-500 mt-2 mb-4">This project has no wiki content yet.</p>
-                                                <button
-                                                    onClick={() => setIsEditingWiki(true)}
-                                                    className="px-4 py-2 bg-white text-black font-medium rounded-sm hover:bg-zinc-200 transition-colors"
-                                                >
-                                                    Add Documentation
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <ProjectWikiTab project={project} onUpdate={setProject} />
                     )}
 
                     {activeTab === 'infrastructure' && (
-                        <div className="space-y-6">
-                            <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-6">
-                                <ResourceManager projectId={project.id} />
-                            </div>
-                        </div>
+                        <ProjectInfrastructureTab projectId={project.id} />
                     )}
 
                     {activeTab === 'environment' && (
                         <EnvVarManager projectId={project.id} />
-                    )
-                    }
+                    )}
 
-                    {
-                        activeTab === 'deployments' && (
-                            <div className="space-y-4">
-                                {deployments.length === 0 ? (
-                                    <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
-                                        <Rocket className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                                        <h3 className="text-lg font-medium text-white">No Deployments Yet</h3>
-                                        <p className="text-zinc-500 mt-2">Deployments for this project will appear here.</p>
-                                    </div>
-                                ) : (
-                                    deployments.map((deployment) => (
-                                        <Link
-                                            key={deployment.id}
-                                            to={`/deployments/${deployment.id}`}
-                                            className="block bg-zinc-900/30 border border-zinc-800 hover:border-zinc-700 rounded-sm p-4 transition-colors"
-                                        >
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-3 mb-2">
-                                                        <span className="font-mono text-white">{deployment.version}</span>
-                                                        <span className={`text-xs px-2 py-0.5 rounded-sm font-mono ${deployment.status === 1
-                                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                                            : deployment.status === 2
-                                                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                                            }`}>
-                                                            {deployment.status === 1 ? 'Success' : deployment.status === 2 ? 'Failed' : 'Pending'}
-                                                        </span>
-                                                        <span className="text-xs text-zinc-500 font-mono">{deployment.environment}</span>
-                                                    </div>
-                                                    <p className="text-sm text-zinc-400">{deployment.notes || 'No notes'}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-xs text-zinc-500 font-mono">{formatTimeAgo(deployment.deployedAt)}</p>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    ))
-                                )}
-                            </div>
-                        )
-                    }
+                    {activeTab === 'deployments' && (
+                        <ProjectDeploymentsTab deployments={deployments} />
+                    )}
 
-                    {
-                        activeTab === 'incidents' && (
-                            <div className="space-y-4">
-                                {incidents.length === 0 ? (
-                                    <div className="text-center py-20 border border-dashed border-zinc-800 rounded-sm">
-                                        <AlertTriangle className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                                        <h3 className="text-lg font-medium text-white">No Incidents</h3>
-                                        <p className="text-zinc-500 mt-2">Incidents for this project will appear here.</p>
-                                    </div>
-                                ) : (
-                                    incidents.map((incident) => {
-                                        const getSeverityColor = (severity: number) => {
-                                            switch (severity) {
-                                                case 0: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-                                                case 1: return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-                                                case 2: return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
-                                                case 3: return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-                                                default: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
-                                            }
-                                        };
+                    {activeTab === 'incidents' && (
+                        <ProjectIncidentsTab incidents={incidents} />
+                    )}
 
-                                        const getStatusColor = (status: number) => {
-                                            switch (status) {
-                                                case 0: return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-                                                case 1: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-                                                case 2: return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-                                                case 3: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
-                                                default: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
-                                            }
-                                        };
-
-                                        return (
-                                            <Link
-                                                key={incident.id}
-                                                to={`/incidents/${incident.id}`}
-                                                className="block bg-zinc-900/30 border border-zinc-800 hover:border-zinc-700 rounded-sm p-4 transition-colors"
-                                            >
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-3 mb-2">
-                                                            <h4 className="font-medium text-white">{incident.title}</h4>
-                                                            <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono capitalize ${getSeverityColor(incident.severity)}`}>
-                                                                {getSeverityString(incident.severity)}
-                                                            </span>
-                                                            <span className={`text-xs px-2 py-0.5 rounded-sm border font-mono capitalize ${getStatusColor(incident.status)}`}>
-                                                                {getStatusString(incident.status)}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-sm text-zinc-400">{incident.description}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="text-xs text-zinc-500 font-mono">{formatTimeAgo(incident.createdAt)}</p>
-                                                    </div>
-                                                </div>
-                                            </Link>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        )
-                    }
-
-                    {
-                        activeTab === 'settings' && (
-                            <div className="max-w-2xl">
-                                <div className="bg-zinc-900/30 border border-zinc-800 rounded-sm p-8">
-                                    <h3 className="text-lg font-bold text-white mb-6">Project Settings</h3>
-                                    <form onSubmit={handleSave} className="space-y-6">
-                                        <div>
-                                            <label className="block text-sm font-medium text-zinc-400 mb-2">Project Name</label>
-                                            <input
-                                                type="text"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-zinc-400 mb-2">Description</label>
-                                            <textarea
-                                                rows={3}
-                                                value={formData.description}
-                                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-zinc-400 mb-2">Repository URL</label>
-                                            <input
-                                                type="text"
-                                                value={formData.repoUrl}
-                                                onChange={(e) => setFormData({ ...formData, repoUrl: e.target.value })}
-                                                placeholder="github.com/org/repo"
-                                                className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
-                                            />
-                                        </div>
-
-
-
-                                        <div className="pt-6 border-t border-zinc-800">
-                                            <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider font-mono">Secrets & Keys</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-zinc-400 mb-2">API Key</label>
-                                                    <input
-                                                        type="password"
-                                                        value={formData.apiKey}
-                                                        onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-zinc-400 mb-2">Webhook Secret</label>
-                                                    <input
-                                                        type="password"
-                                                        value={formData.webhookSecret}
-                                                        onChange={(e) => setFormData({ ...formData, webhookSecret: e.target.value })}
-                                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-sm px-4 py-2 text-white focus:outline-none focus:border-zinc-600"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="pt-4 border-t border-zinc-800 flex justify-between items-center">
-                                            <button
-                                                type="button"
-                                                onClick={handleDelete}
-                                                disabled={isDeleting}
-                                                className="px-4 py-2 bg-rose-500/10 text-rose-400 font-medium rounded-sm hover:bg-rose-500/20 transition-colors flex items-center gap-2"
-                                            >
-                                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                                                Delete Project
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                disabled={isSaving}
-                                                className="px-4 py-2 bg-white text-black font-medium rounded-sm hover:bg-zinc-200 transition-colors flex items-center gap-2"
-                                            >
-                                                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                                                Save Changes
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        )
-                    }
-                </motion.div >
-            </div >
+                    {activeTab === 'settings' && (
+                        <ProjectSettingsTab
+                            project={project}
+                            onUpdate={setProject}
+                            onDelete={handleDelete}
+                        />
+                    )}
+                </motion.div>
+            </div>
 
             <TriggerDeploymentModal
                 isOpen={isDeployModalOpen}
                 onClose={() => setIsDeployModalOpen(false)}
                 onSuccess={() => {
-                    // Optionally navigate to deployments page
                     window.location.href = '/deployments';
                 }}
                 preselectedProject={project?.name}
             />
-        </div >
+        </div>
     );
 };
 

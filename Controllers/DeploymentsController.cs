@@ -1,34 +1,34 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using IncidentDashboard.Data;
-using IncidentDashboard.Models;
+using IncidentDashboard.DTOs;
+using IncidentDashboard.Services.Interfaces;
 
 namespace IncidentDashboard.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Tags("03. Deployments")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
     public class DeploymentsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IDeploymentService _deploymentService;
 
-        public DeploymentsController(AppDbContext context)
+        public DeploymentsController(IDeploymentService deploymentService)
         {
-            _context = context;
+            _deploymentService = deploymentService;
         }
 
         // GET: api/Deployments
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Deployment>>> GetDeployments()
+        public async Task<ActionResult<PagedResult<DeploymentDto>>> GetDeployments([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? projectName = null, [FromQuery] string? environment = null)
         {
-            return await _context.Deployments.ToListAsync();
+            return await _deploymentService.GetDeploymentsAsync(page, pageSize, projectName, environment);
         }
 
         // GET: api/Deployments/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Deployment>> GetDeployment(int id)
+        public async Task<ActionResult<DeploymentDto>> GetDeployment(int id)
         {
-            var deployment = await _context.Deployments.FindAsync(id);
+            var deployment = await _deploymentService.GetDeploymentByIdAsync(id);
 
             if (deployment == null)
             {
@@ -40,56 +40,36 @@ namespace IncidentDashboard.Controllers
 
         // POST: api/Deployments
         [HttpPost]
-        public async Task<ActionResult<Deployment>> PostDeployment(Deployment deployment)
+        public async Task<ActionResult<DeploymentDto>> PostDeployment(CreateDeploymentDto deploymentDto)
         {
-            _context.Deployments.Add(deployment);
-            
-            // Update the project's LastDeploy time
-            var project = await _context.Projects.FirstOrDefaultAsync(p => p.Name == deployment.ProjectName);
-            if (project != null)
-            {
-                project.LastDeploy = DateTime.UtcNow;
-                _context.Entry(project).State = EntityState.Modified;
-            }
-
-            await _context.SaveChangesAsync();
-
+            var deployment = await _deploymentService.CreateDeploymentAsync(deploymentDto);
             return CreatedAtAction(nameof(GetDeployment), new { id = deployment.Id }, deployment);
         }
 
         // PUT: api/Deployments/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutDeployment(int id, Deployment deployment)
+        public async Task<IActionResult> PutDeployment(int id, UpdateDeploymentDto deploymentDto)
         {
-            if (id != deployment.Id)
+            var result = await _deploymentService.UpdateDeploymentAsync(id, deploymentDto);
+            if (!result)
             {
-                return BadRequest();
-            }
-
-            _context.Entry(deployment).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!DeploymentExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound();
             }
 
             return NoContent();
         }
 
-        private bool DeploymentExists(int id)
+        // DELETE: api/Deployments/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteDeployment(int id)
         {
-            return _context.Deployments.Any(e => e.Id == id);
+            var result = await _deploymentService.DeleteDeploymentAsync(id);
+            if (!result)
+            {
+                return NotFound();
+            }
+
+            return NoContent();
         }
     }
 }

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService, LoginRequest, RegisterRequest, User } from '../services/authService';
-import { api } from '../services/api';
+
 
 interface AuthContextType {
   user: User | null;
@@ -50,8 +50,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (data: RegisterRequest) => {
     await authService.register(data);
-    // Auto login after register? Or redirect to login?
-    // For now, let's just let the component handle redirect to login
+    // Auto login after register
+    await login({
+      username: data.username,
+      password: data.password
+    });
   };
 
   const logout = () => {

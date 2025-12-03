@@ -1,21 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-    CheckSquare,
     Plus,
     Search,
     Loader2,
     AlertTriangle,
     Rocket,
-    MoreVertical,
     Trash2,
     Edit2,
-    Copy,
+    CheckSquare,
     ChevronRight
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import CustomDropdown from '../components/CustomDropdown';
-import CreateChecklistTemplateModal from '../components/CreateChecklistTemplateModal';
+import CustomDropdown from '../components/ui/CustomDropdown';
+import CreateChecklistTemplateModal from '../features/checklists/components/CreateChecklistTemplateModal';
 import {
     getChecklistTemplates,
     createChecklistTemplate,

@@ -8,6 +8,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddControllers();
+builder.Services.AddScoped<IncidentDashboard.Services.Interfaces.IAuthService, IncidentDashboard.Services.AuthService>();
+builder.Services.AddScoped<IncidentDashboard.Services.Interfaces.IIncidentService, IncidentDashboard.Services.IncidentService>();
+builder.Services.AddScoped<IncidentDashboard.Services.Interfaces.IDeploymentService, IncidentDashboard.Services.DeploymentService>();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

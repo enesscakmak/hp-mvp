@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Rocket, AlertTriangle, CheckSquare, ArrowRight, Activity, Terminal } from 'lucide-react';
+import { FolderKanban, Rocket, AlertTriangle, CheckSquare, ArrowRight, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Section: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
