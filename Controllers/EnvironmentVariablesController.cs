@@ -1,7 +1,10 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using IncidentDashboard.Data;
 using IncidentDashboard.Models;
+using IncidentDashboard.Features.EnvironmentVariables.Queries.GetEnvironmentVariablesByProject;
+using IncidentDashboard.Features.EnvironmentVariables.Commands.CreateEnvironmentVariable;
+using IncidentDashboard.Features.EnvironmentVariables.Commands.UpdateEnvironmentVariable;
+using IncidentDashboard.Features.EnvironmentVariables.Commands.DeleteEnvironmentVariable;
 
 namespace IncidentDashboard.Controllers
 {
@@ -9,57 +12,43 @@ namespace IncidentDashboard.Controllers
     [ApiController]
     public class EnvironmentVariablesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IMediator _mediator;
 
-        public EnvironmentVariablesController(AppDbContext context)
+        public EnvironmentVariablesController(IMediator mediator)
         {
-            _context = context;
+            _mediator = mediator;
         }
 
         // GET: api/EnvironmentVariables/project/5
         [HttpGet("project/{projectId}")]
         public async Task<ActionResult<IEnumerable<EnvironmentVariable>>> GetByProject(int projectId)
         {
-            return await _context.EnvironmentVariables
-                .Where(e => e.ProjectId == projectId)
-                .ToListAsync();
+            var envVars = await _mediator.Send(new GetEnvironmentVariablesByProjectQuery { ProjectId = projectId });
+            return Ok(envVars);
         }
 
         // POST: api/EnvironmentVariables
         [HttpPost]
-        public async Task<ActionResult<EnvironmentVariable>> Create(EnvironmentVariable envVar)
+        public async Task<ActionResult<EnvironmentVariable>> Create(CreateEnvironmentVariableCommand command)
         {
-            _context.EnvironmentVariables.Add(envVar);
-            await _context.SaveChangesAsync();
-
+            var envVar = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetByProject), new { projectId = envVar.ProjectId }, envVar);
         }
 
         // PUT: api/EnvironmentVariables/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, EnvironmentVariable envVar)
+        public async Task<IActionResult> Update(int id, UpdateEnvironmentVariableCommand command)
         {
-            if (id != envVar.Id)
+            if (id != command.Id)
             {
                 return BadRequest();
             }
 
-            _context.Entry(envVar).State = EntityState.Modified;
+            var result = await _mediator.Send(command);
 
-            try
+            if (!result)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!EnvVarExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound();
             }
 
             return NoContent();
@@ -69,21 +58,14 @@ namespace IncidentDashboard.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var envVar = await _context.EnvironmentVariables.FindAsync(id);
-            if (envVar == null)
+            var result = await _mediator.Send(new DeleteEnvironmentVariableCommand { Id = id });
+
+            if (!result)
             {
                 return NotFound();
             }
 
-            _context.EnvironmentVariables.Remove(envVar);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool EnvVarExists(int id)
-        {
-            return _context.EnvironmentVariables.Any(e => e.Id == id);
         }
     }
 }

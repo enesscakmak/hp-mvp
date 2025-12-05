@@ -23,7 +23,7 @@ const RegisterPage: React.FC = () => {
             navigate('/');
         } catch (error: any) {
             console.error('Registration failed', error);
-            toast.error(error.response?.data || 'Registration failed. Please try again.');
+            toast.error(error.message || 'Registration failed. Please try again.');
         } finally {
             setIsLoading(false);
         }

@@ -1,6 +1,11 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using IncidentDashboard.DTOs;
-using IncidentDashboard.Services.Interfaces;
+using IncidentDashboard.Features.Incidents.Queries.GetIncidents;
+using IncidentDashboard.Features.Incidents.Queries.GetIncidentById;
+using IncidentDashboard.Features.Incidents.Commands.CreateIncident;
+using IncidentDashboard.Features.Incidents.Commands.UpdateIncident;
+using IncidentDashboard.Features.Incidents.Commands.DeleteIncident;
 
 namespace IncidentDashboard.Controllers
 {
@@ -10,25 +15,32 @@ namespace IncidentDashboard.Controllers
     [Microsoft.AspNetCore.Authorization.Authorize]
     public class IncidentsController : ControllerBase
     {
-        private readonly IIncidentService _incidentService;
+        private readonly IMediator _mediator;
 
-        public IncidentsController(IIncidentService incidentService)
+        public IncidentsController(IMediator mediator)
         {
-            _incidentService = incidentService;
+            _mediator = mediator;
         }
 
         // GET: api/Incidents
         [HttpGet]
         public async Task<ActionResult<PagedResult<IncidentDto>>> GetIncidents([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] int? deploymentId = null, [FromQuery] int? projectId = null)
         {
-            return await _incidentService.GetIncidentsAsync(page, pageSize, deploymentId, projectId);
+            var result = await _mediator.Send(new GetIncidentsQuery 
+            { 
+                Page = page, 
+                PageSize = pageSize, 
+                DeploymentId = deploymentId, 
+                ProjectId = projectId 
+            });
+            return result;
         }
 
         // GET: api/Incidents/5
         [HttpGet("{id}")]
         public async Task<ActionResult<IncidentDto>> GetIncident(int id)
         {
-            var incident = await _incidentService.GetIncidentByIdAsync(id);
+            var incident = await _mediator.Send(new GetIncidentByIdQuery { Id = id });
 
             if (incident == null)
             {
@@ -42,7 +54,7 @@ namespace IncidentDashboard.Controllers
         [HttpPost]
         public async Task<ActionResult<IncidentDto>> PostIncident(CreateIncidentDto incidentDto)
         {
-            var incident = await _incidentService.CreateIncidentAsync(incidentDto);
+            var incident = await _mediator.Send(new CreateIncidentCommand(incidentDto));
             return CreatedAtAction(nameof(GetIncident), new { id = incident.Id }, incident);
         }
 
@@ -50,7 +62,7 @@ namespace IncidentDashboard.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutIncident(int id, UpdateIncidentDto incidentDto)
         {
-            var result = await _incidentService.UpdateIncidentAsync(id, incidentDto);
+            var result = await _mediator.Send(new UpdateIncidentCommand(id, incidentDto));
             if (!result)
             {
                 return NotFound();
@@ -63,7 +75,7 @@ namespace IncidentDashboard.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteIncident(int id)
         {
-            var result = await _incidentService.DeleteIncidentAsync(id);
+            var result = await _mediator.Send(new DeleteIncidentCommand { Id = id });
             if (!result)
             {
                 return NotFound();

@@ -1,6 +1,6 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using IncidentDashboard.Data;
+using IncidentDashboard.Features.Dashboard.Queries.GetDashboardStats;
 
 namespace IncidentDashboard.Controllers
 {
@@ -9,26 +9,18 @@ namespace IncidentDashboard.Controllers
     [Tags("01. Dashboard")]
     public class DashboardController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IMediator _mediator;
 
-        public DashboardController(AppDbContext context)
+        public DashboardController(IMediator mediator)
         {
-            _context = context;
+            _mediator = mediator;
         }
 
         [HttpGet("stats")]
         public async Task<ActionResult<object>> GetStats()
         {
-            var totalProjects = await _context.Projects.CountAsync();
-            var activeIncidents = await _context.Incidents.CountAsync(i => i.Status != Models.IncidentStatus.Closed && i.Status != Models.IncidentStatus.Resolved);
-            var recentDeployments = await _context.Deployments.OrderByDescending(d => d.DeployedAt).Take(5).ToListAsync();
-
-            return new
-            {
-                TotalProjects = totalProjects,
-                ActiveIncidents = activeIncidents,
-                RecentDeployments = recentDeployments
-            };
+            var stats = await _mediator.Send(new GetDashboardStatsQuery());
+            return Ok(stats);
         }
     }
 }

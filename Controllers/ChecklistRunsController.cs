@@ -1,8 +1,12 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using IncidentDashboard.Data;
 using IncidentDashboard.Models;
-using System.Text.Json;
+using IncidentDashboard.Features.ChecklistRuns.Queries.GetChecklistRuns;
+using IncidentDashboard.Features.ChecklistRuns.Queries.GetChecklistRunById;
+using IncidentDashboard.Features.ChecklistRuns.Queries.GetChecklistRunsByTarget;
+using IncidentDashboard.Features.ChecklistRuns.Commands.CreateChecklistRun;
+using IncidentDashboard.Features.ChecklistRuns.Commands.UpdateChecklistRun;
+using IncidentDashboard.Features.ChecklistRuns.Commands.CompleteChecklistRun;
 
 namespace IncidentDashboard.Controllers
 {
@@ -11,25 +15,26 @@ namespace IncidentDashboard.Controllers
     [Tags("05. Checklists")]
     public class ChecklistRunsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IMediator _mediator;
 
-        public ChecklistRunsController(AppDbContext context)
+        public ChecklistRunsController(IMediator mediator)
         {
-            _context = context;
+            _mediator = mediator;
         }
 
         // GET: api/ChecklistRuns
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ChecklistRun>>> GetChecklistRuns()
         {
-            return await _context.ChecklistRuns.ToListAsync();
+            var runs = await _mediator.Send(new GetChecklistRunsQuery());
+            return Ok(runs);
         }
 
         // GET: api/ChecklistRuns/5
         [HttpGet("{id}")]
         public async Task<ActionResult<ChecklistRun>> GetChecklistRun(int id)
         {
-            var checklistRun = await _context.ChecklistRuns.FindAsync(id);
+            var checklistRun = await _mediator.Send(new GetChecklistRunByIdQuery { Id = id });
 
             if (checklistRun == null)
             {
@@ -43,50 +48,32 @@ namespace IncidentDashboard.Controllers
         [HttpGet("by-target/{targetId}")]
         public async Task<ActionResult<IEnumerable<ChecklistRun>>> GetChecklistRunsByTarget(int targetId)
         {
-            return await _context.ChecklistRuns
-                .Where(r => r.TargetId == targetId)
-                .ToListAsync();
+            var runs = await _mediator.Send(new GetChecklistRunsByTargetQuery { TargetId = targetId });
+            return Ok(runs);
         }
 
         // POST: api/ChecklistRuns
         [HttpPost]
-        public async Task<ActionResult<ChecklistRun>> PostChecklistRun(ChecklistRun checklistRun)
+        public async Task<ActionResult<ChecklistRun>> PostChecklistRun(CreateChecklistRunCommand command)
         {
-            checklistRun.StartedAt = DateTime.UtcNow;
-            checklistRun.Status = "active";
-            checklistRun.Progress = 0;
-            
-            _context.ChecklistRuns.Add(checklistRun);
-            await _context.SaveChangesAsync();
-
+            var checklistRun = await _mediator.Send(command);
             return CreatedAtAction("GetChecklistRun", new { id = checklistRun.Id }, checklistRun);
         }
 
         // PUT: api/ChecklistRuns/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutChecklistRun(int id, ChecklistRun checklistRun)
+        public async Task<IActionResult> PutChecklistRun(int id, UpdateChecklistRunCommand command)
         {
-            if (id != checklistRun.Id)
+            if (id != command.Id)
             {
                 return BadRequest();
             }
 
-            _context.Entry(checklistRun).State = EntityState.Modified;
+            var result = await _mediator.Send(command);
 
-            try
+            if (!result)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ChecklistRunExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound();
             }
 
             return NoContent();
@@ -96,24 +83,14 @@ namespace IncidentDashboard.Controllers
         [HttpPut("{id}/complete")]
         public async Task<IActionResult> CompleteChecklistRun(int id)
         {
-            var run = await _context.ChecklistRuns.FindAsync(id);
-            if (run == null)
+            var result = await _mediator.Send(new CompleteChecklistRunCommand { Id = id });
+
+            if (!result)
             {
                 return NotFound();
             }
 
-            run.Status = "completed";
-            run.CompletedAt = DateTime.UtcNow;
-            run.Progress = 100;
-            
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool ChecklistRunExists(int id)
-        {
-            return _context.ChecklistRuns.Any(e => e.Id == id);
         }
     }
 }

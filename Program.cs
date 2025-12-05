@@ -15,6 +15,8 @@ builder.Services.AddScoped<IncidentDashboard.Services.Interfaces.IDeploymentServ
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",

@@ -1,7 +1,11 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using IncidentDashboard.Data;
 using IncidentDashboard.Models;
+using IncidentDashboard.Features.Projects.Queries.GetProjects;
+using IncidentDashboard.Features.Projects.Queries.GetProjectById;
+using IncidentDashboard.Features.Projects.Commands.CreateProject;
+using IncidentDashboard.Features.Projects.Commands.UpdateProject;
+using IncidentDashboard.Features.Projects.Commands.DeleteProject;
 
 namespace IncidentDashboard.Controllers
 {
@@ -10,91 +14,57 @@ namespace IncidentDashboard.Controllers
     [Tags("02. Projects")]
     public class ProjectsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IMediator _mediator;
 
-        public ProjectsController(AppDbContext context)
+        public ProjectsController(IMediator mediator)
         {
-            _context = context;
+            _mediator = mediator;
         }
 
         // GET: api/Projects
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
         {
-            var projects = await _context.Projects.ToListAsync();
-            
-            // Dynamically calculate LastDeploy for each project
-            foreach (var project in projects)
-            {
-                var latestDeployment = await _context.Deployments
-                    .Where(d => d.ProjectName == project.Name)
-                    .OrderByDescending(d => d.DeployedAt)
-                    .FirstOrDefaultAsync();
-                
-                project.LastDeploy = latestDeployment?.DeployedAt ?? DateTime.UtcNow;
-            }
-            
-            return projects;
+            var projects = await _mediator.Send(new GetProjectsQuery());
+            return Ok(projects);
         }
 
         // GET: api/Projects/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Project>> GetProject(int id)
         {
-            var project = await _context.Projects.FindAsync(id);
+            var project = await _mediator.Send(new GetProjectByIdQuery { Id = id });
 
             if (project == null)
             {
                 return NotFound();
             }
 
-            // Dynamically calculate LastDeploy
-            var latestDeployment = await _context.Deployments
-                .Where(d => d.ProjectName == project.Name)
-                .OrderByDescending(d => d.DeployedAt)
-                .FirstOrDefaultAsync();
-            
-            project.LastDeploy = latestDeployment?.DeployedAt ?? DateTime.UtcNow;
-
             return project;
         }
 
         // POST: api/Projects
         [HttpPost]
-        public async Task<ActionResult<Project>> PostProject(Project project)
+        public async Task<ActionResult<Project>> PostProject(CreateProjectCommand command)
         {
-            project.LastDeploy = DateTime.UtcNow;
-            _context.Projects.Add(project);
-            await _context.SaveChangesAsync();
-
+            var project = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
         }
 
         // PUT: api/Projects/5
         [HttpPut("{id}")]
-        public async Task<ActionResult<Project>> PutProject(int id, Project project)
+        public async Task<ActionResult<Project>> PutProject(int id, UpdateProjectCommand command)
         {
-            if (id != project.Id)
+            if (id != command.Id)
             {
                 return BadRequest();
             }
 
-            _context.Entry(project).State = EntityState.Modified;
+            var project = await _mediator.Send(command);
 
-            try
+            if (project == null)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ProjectExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound();
             }
 
             return project;
@@ -104,21 +74,14 @@ namespace IncidentDashboard.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
-            var project = await _context.Projects.FindAsync(id);
-            if (project == null)
+            var result = await _mediator.Send(new DeleteProjectCommand { Id = id });
+
+            if (!result)
             {
                 return NotFound();
             }
 
-            _context.Projects.Remove(project);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool ProjectExists(int id)
-        {
-            return _context.Projects.Any(e => e.Id == id);
         }
     }
 }

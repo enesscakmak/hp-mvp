@@ -1,66 +1,49 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using IncidentDashboard.Data;
-using IncidentDashboard.Models;
 using System.Security.Claims;
+using IncidentDashboard.Models;
+using IncidentDashboard.Features.Users.Queries.GetMe;
+using IncidentDashboard.Features.Users.Queries.GetAllUsers;
 
 namespace IncidentDashboard.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    [Tags("07. Users")]
+    [Tags("09. Users")]
     public class UsersController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IMediator _mediator;
 
-        public UsersController(AppDbContext context)
+        public UsersController(IMediator mediator)
         {
-            _context = context;
+            _mediator = mediator;
         }
 
         [HttpGet("me")]
-        public async Task<ActionResult<object>> GetMe()
+        public async Task<ActionResult<User>> GetMe()
         {
-            var username = User.FindFirst(ClaimTypes.Name)?.Value;
-            if (string.IsNullOrEmpty(username))
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
             {
-                return Unauthorized();
+                return BadRequest("User email not found in token");
             }
 
-            var user = await _context.Users
-                .Select(u => new 
-                { 
-                    u.Id, 
-                    u.Username, 
-                    u.Email, 
-                    u.Role 
-                })
-                .FirstOrDefaultAsync(u => u.Username == username);
+            var user = await _mediator.Send(new GetMeQuery { Email = email });
 
             if (user == null)
             {
-                return NotFound("User not found.");
+                return NotFound("User not found");
             }
 
             return Ok(user);
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<IEnumerable<object>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
         {
-            var users = await _context.Users
-                .Select(u => new 
-                { 
-                    u.Id, 
-                    u.Username, 
-                    u.Email, 
-                    u.Role 
-                })
-                .ToListAsync();
-
+            var users = await _mediator.Send(new GetAllUsersQuery());
             return Ok(users);
         }
     }

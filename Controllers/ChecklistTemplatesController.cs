@@ -1,7 +1,11 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using IncidentDashboard.Data;
 using IncidentDashboard.Models;
+using IncidentDashboard.Features.ChecklistTemplates.Queries.GetAllChecklistTemplates;
+using IncidentDashboard.Features.ChecklistTemplates.Queries.GetChecklistTemplateById;
+using IncidentDashboard.Features.ChecklistTemplates.Commands.CreateChecklistTemplate;
+using IncidentDashboard.Features.ChecklistTemplates.Commands.UpdateChecklistTemplate;
+using IncidentDashboard.Features.ChecklistTemplates.Commands.DeleteChecklistTemplate;
 
 namespace IncidentDashboard.Controllers
 {
@@ -9,25 +13,26 @@ namespace IncidentDashboard.Controllers
     [ApiController]
     public class ChecklistTemplatesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IMediator _mediator;
 
-        public ChecklistTemplatesController(AppDbContext context)
+        public ChecklistTemplatesController(IMediator mediator)
         {
-            _context = context;
+            _mediator = mediator;
         }
 
         // GET: api/ChecklistTemplates
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ChecklistTemplate>>> GetChecklistTemplates()
         {
-            return await _context.ChecklistTemplates.ToListAsync();
+            var templates = await _mediator.Send(new GetAllChecklistTemplatesQuery());
+            return Ok(templates);
         }
 
         // GET: api/ChecklistTemplates/5
         [HttpGet("{id}")]
         public async Task<ActionResult<ChecklistTemplate>> GetChecklistTemplate(int id)
         {
-            var checklistTemplate = await _context.ChecklistTemplates.FindAsync(id);
+            var checklistTemplate = await _mediator.Send(new GetChecklistTemplateByIdQuery { Id = id });
 
             if (checklistTemplate == null)
             {
@@ -39,43 +44,26 @@ namespace IncidentDashboard.Controllers
 
         // POST: api/ChecklistTemplates
         [HttpPost]
-        public async Task<ActionResult<ChecklistTemplate>> PostChecklistTemplate(ChecklistTemplate checklistTemplate)
+        public async Task<ActionResult<ChecklistTemplate>> PostChecklistTemplate(CreateChecklistTemplateCommand command)
         {
-            checklistTemplate.CreatedAt = DateTime.UtcNow;
-            checklistTemplate.UpdatedAt = DateTime.UtcNow;
-            
-            _context.ChecklistTemplates.Add(checklistTemplate);
-            await _context.SaveChangesAsync();
-
+            var checklistTemplate = await _mediator.Send(command);
             return CreatedAtAction("GetChecklistTemplate", new { id = checklistTemplate.Id }, checklistTemplate);
         }
 
         // PUT: api/ChecklistTemplates/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutChecklistTemplate(int id, ChecklistTemplate checklistTemplate)
+        public async Task<IActionResult> PutChecklistTemplate(int id, UpdateChecklistTemplateCommand command)
         {
-            if (id != checklistTemplate.Id)
+            if (id != command.Id)
             {
                 return BadRequest();
             }
 
-            checklistTemplate.UpdatedAt = DateTime.UtcNow;
-            _context.Entry(checklistTemplate).State = EntityState.Modified;
+            var result = await _mediator.Send(command);
 
-            try
+            if (!result)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ChecklistTemplateExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound();
             }
 
             return NoContent();
@@ -85,21 +73,14 @@ namespace IncidentDashboard.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteChecklistTemplate(int id)
         {
-            var checklistTemplate = await _context.ChecklistTemplates.FindAsync(id);
-            if (checklistTemplate == null)
+            var result = await _mediator.Send(new DeleteChecklistTemplateCommand { Id = id });
+
+            if (!result)
             {
                 return NotFound();
             }
 
-            _context.ChecklistTemplates.Remove(checklistTemplate);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool ChecklistTemplateExists(int id)
-        {
-            return _context.ChecklistTemplates.Any(e => e.Id == id);
         }
     }
 }

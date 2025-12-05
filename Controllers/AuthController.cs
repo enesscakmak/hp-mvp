@@ -1,7 +1,8 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using IncidentDashboard.Models;
 using IncidentDashboard.DTOs;
-using IncidentDashboard.Services.Interfaces;
+using IncidentDashboard.Features.Auth.Commands.Register;
+using IncidentDashboard.Features.Auth.Commands.Login;
 
 namespace IncidentDashboard.Controllers
 {
@@ -10,11 +11,11 @@ namespace IncidentDashboard.Controllers
     [Tags("06. Authentication")]
     public class AuthController : ControllerBase
     {
-        private readonly IAuthService _authService;
+        private readonly IMediator _mediator;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IMediator mediator)
         {
-            _authService = authService;
+            _mediator = mediator;
         }
 
         [HttpPost("register")]
@@ -22,7 +23,7 @@ namespace IncidentDashboard.Controllers
         {
             try
             {
-                var user = await _authService.RegisterAsync(request);
+                var user = await _mediator.Send(new RegisterCommand(request));
                 return Ok(new UserDto 
                 { 
                     Id = user.Id, 
@@ -40,7 +41,7 @@ namespace IncidentDashboard.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<string>> Login(LoginDto request)
         {
-            var token = await _authService.LoginAsync(request);
+            var token = await _mediator.Send(new LoginCommand(request));
 
             if (token == null)
             {

@@ -1,7 +1,9 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using IncidentDashboard.Data;
 using IncidentDashboard.Models;
+using IncidentDashboard.Features.Clusters.Queries.GetAllClusters;
+using IncidentDashboard.Features.Clusters.Queries.GetClusterById;
+using IncidentDashboard.Features.Clusters.Commands.CreateCluster;
 
 namespace IncidentDashboard.Controllers
 {
@@ -10,25 +12,26 @@ namespace IncidentDashboard.Controllers
     [Tags("04. Clusters")]
     public class ClustersController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IMediator _mediator;
 
-        public ClustersController(AppDbContext context)
+        public ClustersController(IMediator mediator)
         {
-            _context = context;
+            _mediator = mediator;
         }
 
         // GET: api/Clusters
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Cluster>>> GetClusters()
         {
-            return await _context.Clusters.ToListAsync();
+            var clusters = await _mediator.Send(new GetAllClustersQuery());
+            return Ok(clusters);
         }
 
         // GET: api/Clusters/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Cluster>> GetCluster(int id)
         {
-            var cluster = await _context.Clusters.FindAsync(id);
+            var cluster = await _mediator.Send(new GetClusterByIdQuery { Id = id });
 
             if (cluster == null)
             {
@@ -40,11 +43,9 @@ namespace IncidentDashboard.Controllers
 
         // POST: api/Clusters
         [HttpPost]
-        public async Task<ActionResult<Cluster>> PostCluster(Cluster cluster)
+        public async Task<ActionResult<Cluster>> PostCluster(CreateClusterCommand command)
         {
-            _context.Clusters.Add(cluster);
-            await _context.SaveChangesAsync();
-
+            var cluster = await _mediator.Send(command);
             return CreatedAtAction("GetCluster", new { id = cluster.Id }, cluster);
         }
     }
